@@ -26,15 +26,18 @@ trend_data = []
 # 5️⃣ 逐个 Sheet 读取数据，并计算 "GlobalMinPrice" & "TotalTickets"
 for sheet in all_sheets:
     df_sheet = pd.read_excel(file_path, sheet_name=sheet)
-    
+
+    # **过滤“Total Tickets”行（如果存在）**
+    df_sheet = df_sheet[df_sheet["Seat Type"] != "Total Tickets"]
+
     # 确保数据格式正确
     df_sheet["Min_Price"] = pd.to_numeric(df_sheet["Min_Price"], errors="coerce").fillna(0).astype(int)
     df_sheet["Avg_Price"] = pd.to_numeric(df_sheet["Avg_Price"], errors="coerce").fillna(0).astype(int)
     df_sheet["Ticket_Count"] = pd.to_numeric(df_sheet["Ticket_Count"], errors="coerce").fillna(0).astype(int)
     
     # 计算当天的全场最低价 & 总票数
-    global_min_price = df_sheet["Min_Price"].min()
-    total_tickets = df_sheet["Ticket_Count"].sum()
+    global_min_price = df_sheet["Min_Price"].min() if len(df_sheet) > 0 else 0
+    total_tickets = df_sheet["Ticket_Count"].sum() if len(df_sheet) > 0 else 0
     
     # 将结果追加到列表
     # Sheet 名就是日期(YYYY-MM-DD)，转换成真正的日期类型便于排序
@@ -83,6 +86,9 @@ st.pyplot(fig2)
 st.subheader("🔍 View Data for a Specific Day")
 selected_sheet = st.selectbox("Select a date", all_sheets[::-1])  # 逆序，让最新日期在最上面
 df_selected = pd.read_excel(file_path, sheet_name=selected_sheet)
+
+# **同样过滤“Total Tickets”行**
+df_selected = df_selected[df_selected["Seat Type"] != "Total Tickets"]
 
 # 确保数据格式正确
 df_selected["Min_Price"] = pd.to_numeric(df_selected["Min_Price"], errors="coerce").fillna(0).astype(int)
