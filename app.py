@@ -3,6 +3,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import os
 from datetime import datetime
+import matplotlib.dates as mdates
 
 # 🏷️ 页面标题
 st.title("🎟️ Arsenal Ticket Market Data")
@@ -35,13 +36,12 @@ for sheet in all_sheets:
     df_sheet["Ticket_Count"] = pd.to_numeric(df_sheet["Ticket_Count"], errors="coerce").fillna(0).astype(int)
     
     # 计算当日全场最低价 & 总票数
-    # 如果 df_sheet 为空，就返回 0
     global_min_price = df_sheet["Min_Price"].min() if len(df_sheet) > 0 else 0
     total_tickets = df_sheet["Ticket_Count"].sum() if len(df_sheet) > 0 else 0
     
-    # 将 Sheet 名(YYYY-MM-DD) 转换成日期类型，便于排序
+    # 将 Sheet 名(YYYY-MM-DD) 解析为 "纯日期对象"（.date()）
     try:
-        date_obj = datetime.strptime(sheet, "%Y-%m-%d")
+        date_obj = datetime.strptime(sheet, "%Y-%m-%d").date()
     except:
         date_obj = None  # 如果不是标准日期格式就跳过
 
@@ -68,7 +68,12 @@ ax1.plot(df_trend["Date"], df_trend["GlobalMinPrice"], marker="o", color="blue",
 ax1.set_xlabel("Date")
 ax1.set_ylabel("Price (£)")
 ax1.legend()
+
+# 使用 Matplotlib 日期格式，让横坐标只显示月-日
+ax1.xaxis.set_major_locator(mdates.DayLocator())
+ax1.xaxis.set_major_formatter(mdates.DateFormatter('%m-%d'))
 plt.xticks(rotation=45)
+
 st.pyplot(fig1)
 
 # 9️⃣ 绘制 "剩余票数" 走势
@@ -78,7 +83,12 @@ ax2.plot(df_trend["Date"], df_trend["TotalTickets"], marker="o", color="red", la
 ax2.set_xlabel("Date")
 ax2.set_ylabel("Tickets")
 ax2.legend()
+
+# 同样让横坐标只显示月-日
+ax2.xaxis.set_major_locator(mdates.DayLocator())
+ax2.xaxis.set_major_formatter(mdates.DateFormatter('%m-%d'))
 plt.xticks(rotation=45)
+
 st.pyplot(fig2)
 
 # 🔟 下拉框：选择某一天查看详细数据
