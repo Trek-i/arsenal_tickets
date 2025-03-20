@@ -74,20 +74,20 @@ df_all = pd.concat(dfs, ignore_index=True)
 #############################################
 # 3) 数据聚合：对 [Date, Match] 分组
 #############################################
-# 得到每日每场比赛的最低价和剩余票数
+# 不使用 sort=True，让其保持原数据出现顺序
 df_agg = (
     df_all
-    .groupby(["Date", "Match"], sort=False)  # 禁用自动排序
+    .groupby(["Date", "Match"], sort=False)
     .agg({
-        "Min_Price": "min",
-        "Ticket_Count": "sum"
+        "Min_Price": "min",       # 每场比赛的最低票价
+        "Ticket_Count": "sum"     # 剩余票数 = 各Seat Type票数之和
     })
     .reset_index()
     .rename(columns={
         "Min_Price": "Lowest_Price",
         "Ticket_Count": "Remaining_Tickets"
     })
-    # 注释或删除 .sort_values(...) 这一行
+    # 不进行额外的 sort_values，以保留原顺序
     .reset_index(drop=True)
 )
 
@@ -119,116 +119,152 @@ with tab2:
     if df_agg.empty:
         st.warning("No data to plot.")
     else:
-        # 获取所有比赛
-        all_matches = sorted(df_agg["Match"].unique())
-        
-        for match_name in all_matches:
-            df_match = df_agg[df_agg["Match"] == match_name]
-            if df_match.empty:
-                continue
-            
-            # 比赛标题
-            st.markdown(f"### {match_name}")
-            col1, col2 = st.columns(2)
-            
-            # -- 图1: Lowest Price --
-            with col1:
-                st.subheader("Lowest Price Trend")
-                fig1, ax1 = plt.subplots(figsize=(2.5, 2))
+        # 获取比赛列表（保持原出现顺序）
+        all_matches = list(df_agg["Match"].unique())
+
+        # 1) 关键词搜索
+        search_term = st.text_input(
+            "Search matches (Price Trends)",
+            "",
+            help="Type partial keywords to filter the matches below."
+        )
+        # 根据搜索词进行筛选
+        filtered_matches = [m for m in all_matches if search_term.lower() in m.lower()]
+
+        # 2) 下拉菜单
+        selected_match = st.selectbox("Select a match to view charts", ["All"] + filtered_matches)
+
+        # 确定要显示的比赛列表
+        if selected_match == "All":
+            matches_to_plot = filtered_matches
+        else:
+            matches_to_plot = [selected_match]
+
+        # 若搜索结果为空，则提示
+        if not matches_to_plot:
+            st.warning("No matches found with the given search term.")
+        else:
+            # 按出现顺序依次画图
+            for match_name in matches_to_plot:
+                df_match = df_agg[df_agg["Match"] == match_name]
+                if df_match.empty:
+                    continue
+
+                # 比赛标题
+                st.markdown(f"### {match_name}")
+                col1, col2 = st.columns(2)
                 
-                ax1.plot(
-                    df_match["Date"], 
-                    df_match["Lowest_Price"],
-                    marker="o",
-                    markersize=2,      # marker 大小
-                    linewidth=0.8,     # 线条粗细
-                    color="blue", 
-                    label="Lowest Price"
-                )
-                
-                # 在每个点上方标注数值 (离点更近, fontsize更小)
-                for x_val, y_val in zip(df_match["Date"], df_match["Lowest_Price"]):
-                    ax1.text(
-                        x_val, y_val + 1,   # 改成 +1, 让数字贴近点
-                        f"{int(y_val)}",
-                        ha='center', va='bottom',
-                        fontsize=3,         # 字体缩小一半
-                        color="blue"
+                # -- 图1: Lowest Price --
+                with col1:
+                    st.subheader("Lowest Price Trend")
+                    fig1, ax1 = plt.subplots(figsize=(2.5, 2))
+                    
+                    ax1.plot(
+                        df_match["Date"], 
+                        df_match["Lowest_Price"],
+                        marker="o",
+                        markersize=2,      # marker 大小
+                        linewidth=0.8,     # 线条粗细
+                        color="blue", 
+                        label="Lowest Price"
                     )
+                    
+                    # 在每个点上方标注数值 (略微大一点,让其清晰)
+                    for x_val, y_val in zip(df_match["Date"], df_match["Lowest_Price"]):
+                        ax1.text(
+                            x_val, y_val + 1,
+                            f"{int(y_val)}",
+                            ha='center', va='bottom',
+                            fontsize=4,   # 调大一点，使其清晰
+                            color="blue"
+                        )
+                    
+                    ax1.set_xlabel("Date", fontsize=6)
+                    ax1.set_ylabel("Price (£)", fontsize=6)
+                    ax1.legend(fontsize=5)
+                    ax1.tick_params(axis='both', which='major', labelsize=5)
+                    
+                    ax1.xaxis.set_major_locator(mdates.DayLocator())
+                    ax1.xaxis.set_major_formatter(mdates.DateFormatter('%m-%d'))
+                    plt.xticks(rotation=45)
+                    
+                    plt.tight_layout()
+                    st.pyplot(fig1)
                 
-                ax1.set_xlabel("Date", fontsize=6)
-                ax1.set_ylabel("Price (£)", fontsize=6)
-                ax1.legend(fontsize=5)
-                ax1.tick_params(axis='both', which='major', labelsize=5)
-                
-                ax1.xaxis.set_major_locator(mdates.DayLocator())
-                ax1.xaxis.set_major_formatter(mdates.DateFormatter('%m-%d'))
-                plt.xticks(rotation=45)
-                
-                plt.tight_layout()
-                st.pyplot(fig1)
-            
-            # -- 图2: Remaining Tickets --
-            with col2:
-                st.subheader("Remaining Tickets Trend")
-                fig2, ax2 = plt.subplots(figsize=(2.5, 2))
-                
-                ax2.plot(
-                    df_match["Date"], 
-                    df_match["Remaining_Tickets"],
-                    marker="o",
-                    markersize=2,
-                    linewidth=0.8,
-                    color="red", 
-                    label="Tickets"
-                )
-                
-                for x_val, y_val in zip(df_match["Date"], df_match["Remaining_Tickets"]):
-                    ax2.text(
-                        x_val, y_val + 1,  # 改成 +1, 让数字贴近点
-                        f"{int(y_val)}",
-                        ha='center', va='bottom',
-                        fontsize=3,        # 字体缩小一半
-                        color="red"
+                # -- 图2: Remaining Tickets --
+                with col2:
+                    st.subheader("Remaining Tickets Trend")
+                    fig2, ax2 = plt.subplots(figsize=(2.5, 2))
+                    
+                    ax2.plot(
+                        df_match["Date"], 
+                        df_match["Remaining_Tickets"],
+                        marker="o",
+                        markersize=2,
+                        linewidth=0.8,
+                        color="red", 
+                        label="Tickets"
                     )
+                    
+                    for x_val, y_val in zip(df_match["Date"], df_match["Remaining_Tickets"]):
+                        ax2.text(
+                            x_val, y_val + 1,
+                            f"{int(y_val)}",
+                            ha='center', va='bottom',
+                            fontsize=4,  # 同样调大一点
+                            color="red"
+                        )
+                    
+                    ax2.set_xlabel("Date", fontsize=6)
+                    ax2.set_ylabel("Tickets", fontsize=6)
+                    ax2.legend(fontsize=5)
+                    ax2.tick_params(axis='both', which='major', labelsize=5)
+                    
+                    ax2.xaxis.set_major_locator(mdates.DayLocator())
+                    ax2.xaxis.set_major_formatter(mdates.DateFormatter('%m-%d'))
+                    plt.xticks(rotation=45)
+                    
+                    plt.tight_layout()
+                    st.pyplot(fig2)
                 
-                ax2.set_xlabel("Date", fontsize=6)
-                ax2.set_ylabel("Tickets", fontsize=6)
-                ax2.legend(fontsize=5)
-                ax2.tick_params(axis='both', which='major', labelsize=5)
-                
-                ax2.xaxis.set_major_locator(mdates.DayLocator())
-                ax2.xaxis.set_major_formatter(mdates.DateFormatter('%m-%d'))
-                plt.xticks(rotation=45)
-                
-                plt.tight_layout()
-                st.pyplot(fig2)
-            
-            # 分割线
-            st.markdown("---")
+                # 分割线
+                st.markdown("---")
 
 # ============ Tab 3: Raw Data ============
 with tab3:
     st.subheader("📜 Raw Aggregated Data (Per Match, Per Day)")
     
-    all_matches = sorted(df_agg["Match"].unique())
-    selected_match = st.selectbox("Select a match to view raw data", ["All"] + all_matches)
-    
-    if selected_match == "All":
-        df_display = df_agg
-    else:
-        df_display = df_agg[df_agg["Match"] == selected_match]
-
-    st.dataframe(df_display)
-
-    # 下载按钮
-    csv_data = df_display.to_csv(index=False).encode("utf-8")
-    st.download_button(
-        label="📥 Download CSV",
-        data=csv_data,
-        file_name="daily_lowest_price_and_tickets.csv",
-        mime="text/csv"
+    # 1) 关键词搜索
+    all_matches = list(df_agg["Match"].unique())
+    search_term_raw = st.text_input(
+        "Search matches (Raw Data)",
+        "",
+        help="Type partial keywords to filter the matches below."
     )
+    filtered_matches_raw = [m for m in all_matches if search_term_raw.lower() in m.lower()]
+
+    # 2) 下拉菜单
+    selected_match_raw = st.selectbox("Select a match to view raw data", ["All"] + filtered_matches_raw)
+
+    if selected_match_raw == "All":
+        matches_to_show = filtered_matches_raw
+    else:
+        matches_to_show = [selected_match_raw]
+
+    if not matches_to_show:
+        st.warning("No matches found with the given search term.")
+    else:
+        df_display = df_agg[df_agg["Match"].isin(matches_to_show)]
+        st.dataframe(df_display)
+
+        # 下载按钮
+        csv_data = df_display.to_csv(index=False).encode("utf-8")
+        st.download_button(
+            label="📥 Download CSV",
+            data=csv_data,
+            file_name="daily_lowest_price_and_tickets.csv",
+            mime="text/csv"
+        )
 
 # 底部分割
 st.markdown("<br><hr style='border:1px solid #bbb' />", unsafe_allow_html=True)
