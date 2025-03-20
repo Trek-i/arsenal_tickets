@@ -113,7 +113,7 @@ st.markdown(custom_css, unsafe_allow_html=True)
 #############################################
 # 2) Matplotlib 全局风格
 #############################################
-sns.set_style("whitegrid")
+sns.set_theme(style="white")
 plt.rcParams.update({
     "font.size": 6,           # 全局字体
     "axes.titlesize": 6,      # 坐标轴标题大小
