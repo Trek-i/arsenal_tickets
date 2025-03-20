@@ -67,14 +67,11 @@ if not dfs:
 df_all = pd.concat(dfs, ignore_index=True)
 
 # 5️⃣ 聚合：对 [Date, Match] 分组，得到「每日每场」的最低价 & 剩余票数
-#    - Lowest_Price: 在所有座位类型里取 Min_Price 的最小值
-#    - Remaining_Tickets: 将所有 Ticket_Count 相加
 df_agg = df_all.groupby(["Date", "Match"]).agg({
     "Min_Price": "min",     # 每场比赛的最低价
     "Ticket_Count": "sum"   # 每场比赛剩余票数
 }).reset_index()
 
-# 重命名列更直观
 df_agg.rename(columns={
     "Min_Price": "Lowest_Price",
     "Ticket_Count": "Remaining_Tickets"
@@ -83,37 +80,24 @@ df_agg.rename(columns={
 # 按日期排序
 df_agg = df_agg.sort_values(by="Date").reset_index(drop=True)
 
-# 6️⃣ 做一个「Overview」表（按日期汇总），与 Raw Data 不同
-#    显示每日: 总场次、最低 & 最高 & 平均 Lowest_Price、剩余票总数
-df_overview = (
-    df_agg.groupby("Date")
-    .agg(
-        total_matches=("Match", "nunique"),
-        overall_min_price=("Lowest_Price", "min"),
-        overall_max_price=("Lowest_Price", "max"),
-        overall_avg_price=("Lowest_Price", "mean"),
-        total_tickets=("Remaining_Tickets", "sum")
-    )
-    .reset_index()
-)
+# 6️⃣ 找到最新日期，Overview 只显示该日期的每场比赛
+max_date = df_agg["Date"].max() if not df_agg.empty else None
+df_overview_latest = df_agg[df_agg["Date"] == max_date][["Match", "Lowest_Price", "Remaining_Tickets"]]
 
-# 7️⃣ 搭建 Tab 布局
+# 7️⃣ Tab 布局
 tab1, tab2, tab3 = st.tabs(["Overview", "Price Trends", "Raw Data"])
 
 # --------------------------
 #    Tab 1: Overview
 # --------------------------
 with tab1:
-    st.subheader("📊 Daily Overview")
-    st.write("""
-    Below is a daily overview of:
-    - **total_matches**: how many matches were found that day
-    - **overall_min_price**: the lowest 'Lowest_Price' across all matches that day
-    - **overall_max_price**: the highest 'Lowest_Price' across all matches that day
-    - **overall_avg_price**: the average of 'Lowest_Price' across all matches that day
-    - **total_tickets**: sum of all matches' remaining tickets that day
-    """)
-    st.dataframe(df_overview)
+    st.subheader("📊 Latest Date Overview")
+    if max_date is None or df_overview_latest.empty:
+        st.warning("No data for latest date.")
+    else:
+        st.write(f"**Latest Date**: {max_date}")
+        st.write("Below shows each match's Lowest_Price & Remaining_Tickets on this date:")
+        st.dataframe(df_overview_latest)
 
 # --------------------------
 #    Tab 2: Price Trends
@@ -124,7 +108,6 @@ with tab2:
     if df_agg.empty:
         st.warning("No data to plot.")
     else:
-        # 获取所有比赛
         all_matches = sorted(df_agg["Match"].unique())
         
         for match_name in all_matches:
@@ -139,40 +122,56 @@ with tab2:
             # 图1: Lowest Price
             with col1:
                 st.subheader("Lowest Price Trend")
-                # 缩小图表大小 (宽=4, 高=3)
-                fig1, ax1 = plt.subplots(figsize=(4,3))
+                # 图表大小缩小到之前的三分之一 (之前是 (4,3)，现改 (1.3,1) 近似三分之一)
+                fig1, ax1 = plt.subplots(figsize=(1.3, 1))
                 
                 ax1.plot(df_match["Date"], df_match["Lowest_Price"], marker="o", color="blue", label="Lowest Price")
                 
-                # 在每个点上方标注数值
+                # 在每个点上方标注数值 (离近一点，比如 +2)
                 for x_val, y_val in zip(df_match["Date"], df_match["Lowest_Price"]):
-                    ax1.text(x_val, y_val+5, f"{int(y_val)}", ha='center', va='bottom', fontsize=8, color="blue")
+                    ax1.text(
+                        x_val, y_val+2, f"{int(y_val)}",
+                        ha='center', va='bottom', fontsize=6, color="blue"
+                    )
                 
-                ax1.set_xlabel("Date")
-                ax1.set_ylabel("Price (£)")
-                ax1.legend()
+                ax1.set_xlabel("Date", fontsize=6)
+                ax1.set_ylabel("Price (£)", fontsize=6)
+                ax1.legend(fontsize=6)
+                # 调整坐标轴刻度字号
+                ax1.tick_params(axis='both', which='major', labelsize=6)
+                
                 ax1.xaxis.set_major_locator(mdates.DayLocator())
                 ax1.xaxis.set_major_formatter(mdates.DateFormatter('%m-%d'))
                 plt.xticks(rotation=45)
+                # 调整边距，避免标签重叠
+                plt.tight_layout()
+                
                 st.pyplot(fig1)
             
             # 图2: Remaining Tickets
             with col2:
                 st.subheader("Remaining Tickets Trend")
-                fig2, ax2 = plt.subplots(figsize=(4,3))
+                fig2, ax2 = plt.subplots(figsize=(1.3, 1))
                 
                 ax2.plot(df_match["Date"], df_match["Remaining_Tickets"], marker="o", color="red", label="Tickets")
                 
-                # 在每个点上方标注数值
+                # 在每个点上方标注数值 (离近一点，比如 +2)
                 for x_val, y_val in zip(df_match["Date"], df_match["Remaining_Tickets"]):
-                    ax2.text(x_val, y_val+5, f"{int(y_val)}", ha='center', va='bottom', fontsize=8, color="red")
+                    ax2.text(
+                        x_val, y_val+2, f"{int(y_val)}",
+                        ha='center', va='bottom', fontsize=6, color="red"
+                    )
                 
-                ax2.set_xlabel("Date")
-                ax2.set_ylabel("Tickets")
-                ax2.legend()
+                ax2.set_xlabel("Date", fontsize=6)
+                ax2.set_ylabel("Tickets", fontsize=6)
+                ax2.legend(fontsize=6)
+                ax2.tick_params(axis='both', which='major', labelsize=6)
+                
                 ax2.xaxis.set_major_locator(mdates.DayLocator())
                 ax2.xaxis.set_major_formatter(mdates.DateFormatter('%m-%d'))
                 plt.xticks(rotation=45)
+                plt.tight_layout()
+                
                 st.pyplot(fig2)
             
             st.markdown("---")  # 分割线
@@ -183,7 +182,6 @@ with tab2:
 with tab3:
     st.subheader("📜 Raw Aggregated Data (Per Match, Per Day)")
     
-    # 在这里增加一个下拉菜单，让用户可选择某场比赛或 All
     all_matches = sorted(df_agg["Match"].unique())
     selected_match = st.selectbox("Select a match to view raw data", ["All"] + all_matches)
     
