@@ -396,7 +396,7 @@ with tab3:
                 st.session_state["show_passcode_input"] = True
 
             if st.session_state["show_passcode_input"]:
-                st.info("We need a passcode to proceed with the download. Please enter your passcode (Trek1 ~ Trek9).")
+                st.info("We need a passcode to proceed with the download. Please enter your passcode.")
                 passcode_input = st.text_input("Enter passcode:", value="", type="password")
 
                 valid_passcodes = [f"Trek{i}" for i in range(1, 10)]
