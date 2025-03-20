@@ -111,15 +111,23 @@ footer {
 st.markdown(custom_css, unsafe_allow_html=True)
 
 #############################################
-# 2) Matplotlib 全局风格
+# 2) Matplotlib & Seaborn 全局风格
 #############################################
+
+# 方式 A: 使用 Seaborn "ticks" 样式，自动带有更明显的轴线和刻度
+# sns.set_theme(style="ticks")
+
+# 方式 B: 保持 white，然后手动打开所有 spines
 sns.set_theme(style="white")
+
 plt.rcParams.update({
     "font.size": 6,           # 全局字体
     "axes.titlesize": 6,      # 坐标轴标题大小
     "axes.labelsize": 6,      # 坐标轴标签大小
     "xtick.labelsize": 5,     # x轴刻度大小
     "ytick.labelsize": 5,     # y轴刻度大小
+    "axes.spines.top": True,  # 显示上边框
+    "axes.spines.right": True # 显示右边框
 })
 
 #############################################
@@ -298,6 +306,14 @@ with tab2:
                     ax1.set_ylabel("Price (£)", fontsize=6)
                     ax1.legend(fontsize=5)
                     
+                    # 打开所有轴线（spines），确保有完整的边框
+                    for spine in ["top", "right", "bottom", "left"]:
+                        ax1.spines[spine].set_visible(True)
+
+                    # 如果需要更明显的刻度短线，可以自定义 tick_params
+                    ax1.tick_params(axis='both', which='major', length=4, width=1)
+
+                    # 设置 X 轴日期格式
                     ax1.xaxis.set_major_locator(mdates.DayLocator())
                     ax1.xaxis.set_major_formatter(mdates.DateFormatter('%m-%d'))
                     plt.xticks(rotation=45)
@@ -333,6 +349,13 @@ with tab2:
                     ax2.set_ylabel("Tickets", fontsize=6)
                     ax2.legend(fontsize=5)
                     
+                    # 同样打开所有 spines
+                    for spine in ["top", "right", "bottom", "left"]:
+                        ax2.spines[spine].set_visible(True)
+
+                    # 设置更明显的刻度
+                    ax2.tick_params(axis='both', which='major', length=4, width=1)
+
                     ax2.xaxis.set_major_locator(mdates.DayLocator())
                     ax2.xaxis.set_major_formatter(mdates.DateFormatter('%m-%d'))
                     plt.xticks(rotation=45)
@@ -356,25 +379,28 @@ with tab3:
     filtered_matches_raw = [m for m in all_matches if search_term_raw.lower() in m.lower()]
     selected_match_raw = st.selectbox("Select a match to view raw data", ["All"] + filtered_matches_raw)
 
-    if selected_match_raw == "All":
-        matches_to_show = filtered_matches_raw
-    else:
-        matches_to_show = [selected_match_raw]
-
-    if not matches_to_show:
+    if not filtered_matches_raw:
         st.warning("No matches found with the given search term.")
     else:
-        df_display = df_agg[df_agg["Match"].isin(matches_to_show)]
-        st.dataframe(df_display)
+        if selected_match_raw == "All":
+            matches_to_show = filtered_matches_raw
+        else:
+            matches_to_show = [selected_match_raw]
 
-        # 下载按钮
-        csv_data = df_display.to_csv(index=False).encode("utf-8")
-        st.download_button(
-            label="📥 Download CSV",
-            data=csv_data,
-            file_name="daily_lowest_price_and_tickets.csv",
-            mime="text/csv"
-        )
+        if not matches_to_show:
+            st.warning("No matches found with the given search term.")
+        else:
+            df_display = df_agg[df_agg["Match"].isin(matches_to_show)]
+            st.dataframe(df_display)
+
+            # 下载按钮
+            csv_data = df_display.to_csv(index=False).encode("utf-8")
+            st.download_button(
+                label="📥 Download CSV",
+                data=csv_data,
+                file_name="daily_lowest_price_and_tickets.csv",
+                mime="text/csv"
+            )
 
 # ---------------------------
 # 固定页脚（可添加版权声明等）
