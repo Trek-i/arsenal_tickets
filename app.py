@@ -113,13 +113,7 @@ st.markdown(custom_css, unsafe_allow_html=True)
 #############################################
 # 2) Matplotlib & Seaborn 全局风格
 #############################################
-
-# 方式 A: 使用 Seaborn "ticks" 样式，自动带有更明显的轴线和刻度
-# sns.set_theme(style="ticks")
-
-# 方式 B: 保持 white，然后手动打开所有 spines
 sns.set_theme(style="white")
-
 plt.rcParams.update({
     "font.size": 6,           # 全局字体
     "axes.titlesize": 6,      # 坐标轴标题大小
@@ -306,11 +300,10 @@ with tab2:
                     ax1.set_ylabel("Price (£)", fontsize=6)
                     ax1.legend(fontsize=5)
                     
-                    # 打开所有轴线（spines），确保有完整的边框
+                    # 打开全部 spines
                     for spine in ["top", "right", "bottom", "left"]:
                         ax1.spines[spine].set_visible(True)
-
-                    # 如果需要更明显的刻度短线，可以自定义 tick_params
+                    # 让刻度线更明显
                     ax1.tick_params(axis='both', which='major', length=4, width=1)
 
                     # 设置 X 轴日期格式
@@ -349,11 +342,10 @@ with tab2:
                     ax2.set_ylabel("Tickets", fontsize=6)
                     ax2.legend(fontsize=5)
                     
-                    # 同样打开所有 spines
+                    # 打开全部 spines
                     for spine in ["top", "right", "bottom", "left"]:
                         ax2.spines[spine].set_visible(True)
-
-                    # 设置更明显的刻度
+                    # 让刻度线更明显
                     ax2.tick_params(axis='both', which='major', length=4, width=1)
 
                     ax2.xaxis.set_major_locator(mdates.DayLocator())
@@ -369,7 +361,17 @@ with tab2:
 # ============ Tab 3: Raw Data ============
 with tab3:
     st.subheader("Raw Aggregated Data (Per Match, Per Day)")
-    
+
+    # 英文提示：请输入提取码
+    st.write("Please enter the passcode to unlock CSV download. (Valid passcodes: Trek1 ~ Trek9)")
+
+    # 先让用户输入提取码
+    passcode_input = st.text_input("Enter passcode:", value="", type="password")
+
+    # 允许的提取码列表
+    valid_passcodes = [f"Trek{i}" for i in range(1, 10)]  # Trek1 ~ Trek9
+
+    # 先让用户搜索与下拉筛选比赛
     all_matches = list(df_agg["Match"].unique())
     search_term_raw = st.text_input(
         "Search matches (Raw Data)",
@@ -393,14 +395,20 @@ with tab3:
             df_display = df_agg[df_agg["Match"].isin(matches_to_show)]
             st.dataframe(df_display)
 
-            # 下载按钮
-            csv_data = df_display.to_csv(index=False).encode("utf-8")
-            st.download_button(
-                label="📥 Download CSV",
-                data=csv_data,
-                file_name="daily_lowest_price_and_tickets.csv",
-                mime="text/csv"
-            )
+            # 判断提取码是否正确
+            if passcode_input in valid_passcodes:
+                st.success("Verification success! You can download the CSV file now.")
+                csv_data = df_display.to_csv(index=False).encode("utf-8")
+                st.download_button(
+                    label="📥 Download CSV",
+                    data=csv_data,
+                    file_name="daily_lowest_price_and_tickets.csv",
+                    mime="text/csv"
+                )
+            elif passcode_input == "":
+                st.info("Please enter the passcode to unlock the download.")
+            else:
+                st.error("Invalid passcode. Please try again.")
 
 # ---------------------------
 # 固定页脚（可添加版权声明等）
