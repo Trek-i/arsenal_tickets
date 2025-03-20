@@ -134,23 +134,32 @@ with tab2:
             # -- 图1: Lowest Price --
             with col1:
                 st.subheader("Lowest Price Trend")
-                # 图表大小：尝试 (2.5, 2) 让文字不重叠
+                # 图表大小：尝试 (2.5, 2)
                 fig1, ax1 = plt.subplots(figsize=(2.5, 2))
                 
-                ax1.plot(df_match["Date"], df_match["Lowest_Price"], 
-                         marker="o", color="blue", label="Lowest Price")
+                # 缩小 marker 和线条
+                ax1.plot(
+                    df_match["Date"], 
+                    df_match["Lowest_Price"],
+                    marker="o",
+                    markersize=2,           # marker 大小(默认约6)，这里缩小到约1/3~1/5
+                    linewidth=0.8,          # 线条粗细(默认1.5左右)，缩小到0.8
+                    color="blue", 
+                    label="Lowest Price"
+                )
                 
-                # 在每个点上方标注数值，字体更小，距离点更近
+                # 在每个点上方标注数值
                 for x_val, y_val in zip(df_match["Date"], df_match["Lowest_Price"]):
                     ax1.text(
                         x_val, y_val + 2, 
                         f"{int(y_val)}", 
-                        ha='center', va='bottom', fontsize=5, color="blue"
+                        ha='center', va='bottom', 
+                        fontsize=5, color="blue"
                     )
                 
                 ax1.set_xlabel("Date", fontsize=6)
                 ax1.set_ylabel("Price (£)", fontsize=6)
-                ax1.legend(fontsize=6)
+                ax1.legend(fontsize=5)  # 缩小图例文字
                 ax1.tick_params(axis='both', which='major', labelsize=5)
                 
                 ax1.xaxis.set_major_locator(mdates.DayLocator())
@@ -165,19 +174,28 @@ with tab2:
                 st.subheader("Remaining Tickets Trend")
                 fig2, ax2 = plt.subplots(figsize=(2.5, 2))
                 
-                ax2.plot(df_match["Date"], df_match["Remaining_Tickets"], 
-                         marker="o", color="red", label="Tickets")
+                # 同样缩小 marker 和线条
+                ax2.plot(
+                    df_match["Date"], 
+                    df_match["Remaining_Tickets"],
+                    marker="o",
+                    markersize=2,      # marker 大小
+                    linewidth=0.8,     # 线条粗细
+                    color="red", 
+                    label="Tickets"
+                )
                 
                 for x_val, y_val in zip(df_match["Date"], df_match["Remaining_Tickets"]):
                     ax2.text(
                         x_val, y_val + 2, 
                         f"{int(y_val)}",
-                        ha='center', va='bottom', fontsize=5, color="red"
+                        ha='center', va='bottom',
+                        fontsize=5, color="red"
                     )
                 
                 ax2.set_xlabel("Date", fontsize=6)
                 ax2.set_ylabel("Tickets", fontsize=6)
-                ax2.legend(fontsize=6)
+                ax2.legend(fontsize=5)  # 缩小图例文字
                 ax2.tick_params(axis='both', which='major', labelsize=5)
                 
                 ax2.xaxis.set_major_locator(mdates.DayLocator())
