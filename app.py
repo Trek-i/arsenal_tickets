@@ -362,16 +362,7 @@ with tab2:
 with tab3:
     st.subheader("Raw Aggregated Data (Per Match, Per Day)")
 
-    # 英文提示：请输入提取码
-    st.write("Please enter the passcode to unlock CSV download. (Valid passcodes: Trek1 ~ Trek9)")
-
-    # 先让用户输入提取码
-    passcode_input = st.text_input("Enter passcode:", value="", type="password")
-
-    # 允许的提取码列表
-    valid_passcodes = [f"Trek{i}" for i in range(1, 10)]  # Trek1 ~ Trek9
-
-    # 先让用户搜索与下拉筛选比赛
+    # 1) 先搜索与下拉筛选比赛
     all_matches = list(df_agg["Match"].unique())
     search_term_raw = st.text_input(
         "Search matches (Raw Data)",
@@ -395,20 +386,33 @@ with tab3:
             df_display = df_agg[df_agg["Match"].isin(matches_to_show)]
             st.dataframe(df_display)
 
-            # 判断提取码是否正确
-            if passcode_input in valid_passcodes:
-                st.success("Verification success! You can download the CSV file now.")
-                csv_data = df_display.to_csv(index=False).encode("utf-8")
-                st.download_button(
-                    label="📥 Download CSV",
-                    data=csv_data,
-                    file_name="daily_lowest_price_and_tickets.csv",
-                    mime="text/csv"
-                )
-            elif passcode_input == "":
-                st.info("Please enter the passcode to unlock the download.")
-            else:
-                st.error("Invalid passcode. Please try again.")
+            # 2) 点击按钮后才显示提取码输入框
+            # 使用 session_state 控制逻辑
+            if "show_passcode_input" not in st.session_state:
+                st.session_state["show_passcode_input"] = False
+
+            download_clicked = st.button("Download CSV")
+            if download_clicked:
+                st.session_state["show_passcode_input"] = True
+
+            if st.session_state["show_passcode_input"]:
+                st.info("We need a passcode to proceed with the download. Please enter your passcode (Trek1 ~ Trek9).")
+                passcode_input = st.text_input("Enter passcode:", value="", type="password")
+
+                valid_passcodes = [f"Trek{i}" for i in range(1, 10)]
+                if passcode_input == "":
+                    st.info("Please enter the passcode above.")
+                elif passcode_input in valid_passcodes:
+                    st.success("Verification success! You can download the CSV file now.")
+                    csv_data = df_display.to_csv(index=False).encode("utf-8")
+                    st.download_button(
+                        label="📥 Download CSV",
+                        data=csv_data,
+                        file_name="daily_lowest_price_and_tickets.csv",
+                        mime="text/csv"
+                    )
+                else:
+                    st.error("Invalid passcode. Please try again.")
 
 # ---------------------------
 # 固定页脚（可添加版权声明等）
