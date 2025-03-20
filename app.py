@@ -15,53 +15,121 @@ st.set_page_config(
 )
 
 #############################################
-# 自定义 CSS (Arsenal 风格)
+# 1) 自定义 CSS (让页面更专业、品牌化)
 #############################################
 custom_css = """
 <style>
-/* 整体背景和字体 */
-body {
-    background-color: #f4f4f4;
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+/* 引入 Google Fonts - Open Sans */
+@import url('https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600&display=swap');
+
+/* 整体重置与默认字体 */
+html, body {
+    margin: 0;
+    padding: 0;
+    font-family: 'Open Sans', sans-serif;
+    background-color: #f8f9fa; /* 页面背景 */
 }
 
-/* 标题与子标题 */
-h1, h2, h3 {
+/* 去掉 Streamlit 默认的边距 */
+.css-18e3th9 {
+    padding: 1rem 2rem 2rem 2rem; /* 自定义页面内边距 */
+}
+
+/* 顶部主 Banner 的背景渐变（阿森纳红色系） */
+.banner-container {
+    text-align: center;
+    padding: 2rem 1rem;
+    background: linear-gradient(90deg, #EF0107 0%, #97010A 100%);
+    margin-bottom: 1rem;
+}
+
+.banner-container img {
+    height: 80px;
+    margin-bottom: 1rem;
+}
+
+.banner-container h1 {
+    color: #fff;
+    margin: 0.5rem 0;
+    font-weight: 600;
+    font-size: 2rem;
+}
+
+.banner-container p {
+    color: #ffe;
+    font-size: 1.1rem;
+}
+
+/* 调整子标题外观 */
+h2, h3 {
     color: #EF0107; /* Arsenal 红 */
+    margin-top: 0.75rem;
+    margin-bottom: 0.5rem;
+    font-weight: 600;
 }
 
-/* 自定义按钮样式 */
-div.stButton > button {
-    background-color: #EF0107;
-    color: white;
-    border: none;
-    padding: 0.5em 1em;
+/* 自定义按钮样式（下载按钮等） */
+div.stButton > button, div.stDownloadButton > button {
+    background-color: #EF0107 !important;
+    color: white !important;
+    border: none !important;
+    padding: 0.5em 1em !important;
+    border-radius: 4px !important;
+    font-weight: 600 !important;
+    cursor: pointer !important;
+}
+
+/* 输入组件（搜索框、下拉菜单）标签 */
+div.stTextInput > label, div.stSelectbox > label {
+    font-weight: 600;
+    color: #333;
+}
+
+/* DataFrame 表格边框与圆角 */
+[data-testid="stDataFrame"] {
+    border: 1px solid #ddd;
     border-radius: 4px;
-    font-weight: bold;
 }
 
-/* 数据表格样式 */
-.css-1d391kg {
-    font-size: 0.9em;
-}
-
-/* 图表内文字提示字体 */
-.matplotlib-text {
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+/* 页脚固定在底部 */
+footer {
+    text-align: center;
+    padding: 1rem;
+    color: #fff;
+    background-color: #000;
+    font-size: 0.9rem;
+    position: fixed;
+    bottom: 0;
+    width: 100%;
+    left: 0;
+    z-index: 999;
+    border-top: 1px solid #333;
 }
 </style>
 """
 st.markdown(custom_css, unsafe_allow_html=True)
 
 #############################################
-# 1) 顶部 Banner
+# 2) Matplotlib 全局风格
+#############################################
+plt.style.use('seaborn-whitegrid')
+plt.rcParams.update({
+    "font.size": 6,           # 全局字体
+    "axes.titlesize": 6,      # 坐标轴标题大小
+    "axes.labelsize": 6,      # 坐标轴标签大小
+    "xtick.labelsize": 5,     # x轴刻度大小
+    "ytick.labelsize": 5,     # y轴刻度大小
+})
+
+#############################################
+# 3) 顶部 Banner
 #############################################
 logo_url = "https://upload.wikimedia.org/wikipedia/en/5/53/Arsenal_FC.svg"  # Arsenal Logo 示例
 st.markdown(
     f"""
-    <div style="text-align: center; margin-bottom: 20px;">
-        <img src="{logo_url}" alt="Arsenal Logo" style="height:80px;">
-        <h1 style='margin: 10px 0;'>Arsenal Ticket Market Data</h1>
+    <div class="banner-container">
+        <img src="{logo_url}" alt="Arsenal Logo">
+        <h1>Arsenal Ticket Market Data</h1>
         <p>One day, one time point! Each match shows its <b>lowest price</b> and <b>remaining tickets</b> over time.</p>
     </div>
     """,
@@ -69,7 +137,7 @@ st.markdown(
 )
 
 #############################################
-# 2) 读取并整合 Excel 数据
+# 4) 读取并整合 Excel 数据
 #############################################
 @st.cache_data(show_spinner=True)
 def load_excel_data(file_path: str):
@@ -120,7 +188,7 @@ if df_all is None:
     st.stop()
 
 #############################################
-# 3) 数据聚合：对 [Date, Match] 分组
+# 5) 数据聚合：对 [Date, Match] 分组
 #############################################
 df_agg = (
     df_all
@@ -144,13 +212,13 @@ max_date = df_agg["Date"].max() if not df_agg.empty else None
 df_overview_latest = df_agg[df_agg["Date"] == max_date][["Match", "Lowest_Price", "Remaining_Tickets"]]
 
 #############################################
-# 4) Streamlit 界面布局 - Tabs
+# 6) Streamlit 界面布局 - Tabs
 #############################################
 tab1, tab2, tab3 = st.tabs(["Overview", "Price Trends", "Raw Data"])
 
 # ============ Tab 1: Overview ============
 with tab1:
-    st.subheader("📊 Latest Date Overview")
+    st.subheader("Latest Date Overview")
     if max_date is None or df_overview_latest.empty:
         st.warning("No data for latest date.")
     else:
@@ -160,7 +228,7 @@ with tab1:
 
 # ============ Tab 2: Price Trends ============
 with tab2:
-    st.subheader("📈 Daily Price & Tickets Trend (One day, one point) - Each Match Separately")
+    st.subheader("Daily Price & Tickets Trend (One day, one point) - Each Match Separately")
 
     if df_agg.empty:
         st.warning("No data to plot.")
@@ -209,8 +277,8 @@ with tab2:
                         df_match["Date"], 
                         df_match["Lowest_Price"],
                         marker="o",
-                        markersize=2,      # marker 大小
-                        linewidth=0.8,     # 线条粗细
+                        markersize=3,      # marker 大小
+                        linewidth=1.0,     # 线条粗细
                         color="#EF0107",   # Arsenal 红
                         label="Lowest Price"
                     )
@@ -221,14 +289,13 @@ with tab2:
                             x_val, y_val + 1,
                             f"{int(y_val)}",
                             ha='center', va='bottom',
-                            fontsize=4,
+                            fontsize=5,
                             color="#EF0107"
                         )
                     
                     ax1.set_xlabel("Date", fontsize=6)
                     ax1.set_ylabel("Price (£)", fontsize=6)
                     ax1.legend(fontsize=5)
-                    ax1.tick_params(axis='both', which='major', labelsize=5)
                     
                     ax1.xaxis.set_major_locator(mdates.DayLocator())
                     ax1.xaxis.set_major_formatter(mdates.DateFormatter('%m-%d'))
@@ -246,8 +313,8 @@ with tab2:
                         df_match["Date"], 
                         df_match["Remaining_Tickets"],
                         marker="o",
-                        markersize=2,
-                        linewidth=0.8,
+                        markersize=3,
+                        linewidth=1.0,
                         color="navy", 
                         label="Tickets"
                     )
@@ -257,14 +324,13 @@ with tab2:
                             x_val, y_val + 1,
                             f"{int(y_val)}",
                             ha='center', va='bottom',
-                            fontsize=4,
+                            fontsize=5,
                             color="navy"
                         )
                     
                     ax2.set_xlabel("Date", fontsize=6)
                     ax2.set_ylabel("Tickets", fontsize=6)
                     ax2.legend(fontsize=5)
-                    ax2.tick_params(axis='both', which='major', labelsize=5)
                     
                     ax2.xaxis.set_major_locator(mdates.DayLocator())
                     ax2.xaxis.set_major_formatter(mdates.DateFormatter('%m-%d'))
@@ -278,7 +344,7 @@ with tab2:
 
 # ============ Tab 3: Raw Data ============
 with tab3:
-    st.subheader("📜 Raw Aggregated Data (Per Match, Per Day)")
+    st.subheader("Raw Aggregated Data (Per Match, Per Day)")
     
     all_matches = list(df_agg["Match"].unique())
     search_term_raw = st.text_input(
@@ -309,6 +375,12 @@ with tab3:
             mime="text/csv"
         )
 
-# 底部分割
-st.markdown("<br><hr style='border:1px solid #bbb' />", unsafe_allow_html=True)
-st.write("✅ Data successfully loaded & displayed!")
+# ---------------------------
+# 固定页脚（可添加版权声明等）
+# ---------------------------
+footer_html = """
+<footer>
+    © 2025 Arsenal Ticket Market. All Rights Reserved.
+</footer>
+"""
+st.markdown(footer_html, unsafe_allow_html=True)
