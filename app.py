@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
+import seaborn as sns
 import matplotlib.dates as mdates
 import os
 from datetime import datetime
@@ -112,7 +113,7 @@ st.markdown(custom_css, unsafe_allow_html=True)
 #############################################
 # 2) Matplotlib 全局风格
 #############################################
-plt.style.use('seaborn-whitegrid')
+sns.set_style("whitegrid")
 plt.rcParams.update({
     "font.size": 6,           # 全局字体
     "axes.titlesize": 6,      # 坐标轴标题大小
