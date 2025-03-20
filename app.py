@@ -77,17 +77,17 @@ df_all = pd.concat(dfs, ignore_index=True)
 # 得到每日每场比赛的最低价和剩余票数
 df_agg = (
     df_all
-    .groupby(["Date", "Match"])
+    .groupby(["Date", "Match"], sort=False)  # 禁用自动排序
     .agg({
-        "Min_Price": "min",       # 每场比赛的最低票价
-        "Ticket_Count": "sum"     # 剩余票数 = 各Seat Type票数之和
+        "Min_Price": "min",
+        "Ticket_Count": "sum"
     })
     .reset_index()
     .rename(columns={
         "Min_Price": "Lowest_Price",
         "Ticket_Count": "Remaining_Tickets"
     })
-    .sort_values(by="Date", ascending=True)
+    # 注释或删除 .sort_values(...) 这一行
     .reset_index(drop=True)
 )
 
