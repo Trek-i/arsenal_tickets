@@ -427,6 +427,7 @@ with tab4:
     components.html(twitter_embed_code, height=2100, scrolling=True)
 
 # =========== Tab 5: EPL Table =========== (新加的)
+
 with tab5:
     st.subheader("Live Premier League Table (API-SPORTS Widget)")
 
@@ -449,8 +450,7 @@ with tab5:
     """
 
     components.html(widget_code, height=800, scrolling=True)
-   components.html(widget_code, height=800, scrolling=True)
-    
+  
 # ---------------------------
 # 固定页脚（可添加版权声明等）
 # ---------------------------
