@@ -393,33 +393,30 @@ with tab3:
 with tab4:
     st.subheader("Arsenal Official Twitter (X) Timeline")
 
-    # 自定义样式让时间线100%宽度，移除内部滚动
-    # 同时在 <a> 标签中指定 data-width="100%" data-height="2500" 等
-    # 再给 components.html() 一个大 height 并 scrolling=False
-    # 这样只会出现页面整体滚动，而不会再出现内嵌滚动条
+    # 通过 CSS 限制 Timeline 宽度为600px，并在小屏时自适应
+    # data-chrome="noheader nofooter" 去除顶部账号名和底部链接
+    # data-width="600" + data-height="2000" + scrolling=True
+    # 让图片不会过于巨大，同时在更小屏幕时有一定自适应
     twitter_embed_code = """
     <style>
     .twitter-timeline {
-      width: 100% !important;
-      min-width: 300px !important;
+      width: 600px !important;
+      max-width: 100% !important;  /* 在小屏幕上自动缩放 */
       margin: 0 auto !important;
-      /* 强行隐藏内嵌滚动条 */
-      overflow-y: hidden !important;
     }
     </style>
     <a class="twitter-timeline"
-       data-width="100%"
-       data-height="2500"
+       data-width="600"
+       data-height="2000"
        data-theme="light"
+       data-chrome="noheader nofooter"
        href="https://twitter.com/Arsenal?ref_src=twsrc%5Etfw">
        Posts from @Arsenal
     </a>
     <script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
     """
-
-    # 给一个足够大的高度，以便在手机上也能看到更多内容
-    # scrolling=False 去掉内嵌滚动条，只使用页面滚动
-    components.html(twitter_embed_code, height=2800, scrolling=False)
+    # 给 components.html 一个稍大的height，并允许滚动
+    components.html(twitter_embed_code, height=2100, scrolling=True)
 
 # ---------------------------
 # 固定页脚（可添加版权声明等）
