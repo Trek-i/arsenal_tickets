@@ -1,246 +1,162 @@
 import streamlit as st
 import pandas as pd
-import plotly.express as px
+import matplotlib.pyplot as plt
+import seaborn as sns
+import matplotlib.dates as mdates
 import os
 from datetime import datetime
-import requests
 import streamlit.components.v1 as components
 
-########################################
-# 0) 页面配置 + SEO 元信息 (示例)
-########################################
+#############################################
+# 0) 首先设置页面配置 (必须在任何 st.xxx 调用之前)
+#############################################
 st.set_page_config(
     page_title="Arsenal Ticket Market",
     page_icon="⚽",
-    layout="wide"
+    layout="wide"  # 宽屏模式
 )
 
-# 通过 HTML 注入一些 meta 标签，提升 SEO (有限效果)
-seo_html = """
-<head>
-  <title>Arsenal Ticket Market</title>
-  <meta name="description" content="A comprehensive platform for Arsenal match tickets, news, fixtures, and data visualization.">
-  <meta name="keywords" content="Arsenal, Tickets, Football, Price, Stats, Premier League">
-  <meta name="author" content="Arsenal">
-</head>
-"""
-st.markdown(seo_html, unsafe_allow_html=True)
-
-########################################
-# 1) 自定义全局 CSS
-########################################
+#############################################
+# 1) 自定义 CSS (让页面更专业、品牌化)
+#############################################
 custom_css = """
 <style>
-/* 引入 Google Fonts */
+/* 引入 Google Fonts - Open Sans */
 @import url('https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600&display=swap');
 
+/* 整体重置与默认字体 */
 html, body {
     margin: 0;
     padding: 0;
     font-family: 'Open Sans', sans-serif;
-    background-color: #f8f9fa; /* 浅灰背景 */
+    background-color: #f8f9fa; /* 页面背景 */
 }
 
-/* 顶部导航条 */
-.navbar {
-    position: fixed;
-    top: 0;
-    width: 100%;
-    background: linear-gradient(90deg, #EF0107 0%, #97010A 100%);
-    z-index: 1000;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    height: 60px;
-}
-.navbar a {
-    color: #fff;
-    text-decoration: none;
-    margin: 0 1.5rem;
-    font-weight: 600;
-    font-size: 1rem;
-    transition: color 0.3s;
-}
-.navbar a:hover {
-    color: #ffe;
-}
-
-/* 调整 Streamlit 默认的内边距，以腾出顶部导航空间 */
+/* 去掉 Streamlit 默认的边距 */
 .css-18e3th9 {
-    padding-top: 4rem;
-    padding-bottom: 2rem;
-    padding-left: 2rem;
-    padding-right: 2rem;
+    padding: 1rem 2rem 2rem 2rem; /* 自定义页面内边距 */
 }
 
-/* Hero 区域 - 大图背景 */
-.hero-section {
-    position: relative;
-    width: 100%;
-    height: 60vh; /* 视窗高度的60% */
-    background: url('https://upload.wikimedia.org/wikipedia/commons/8/8c/Emirates_Stadium_-_East_side_-_2015-10-03.jpg');
-    background-size: cover;
-    background-position: center;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-}
-.hero-overlay {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(239,1,7, 0.6); /* 半透明红色遮罩 */
-}
-.hero-content {
-    position: relative;
-    z-index: 2;
+/* 顶部主 Banner */
+.banner-container {
     text-align: center;
-    color: #fff;
-    padding: 1rem;
-}
-.hero-content h1 {
-    font-size: 2.5rem;
-    margin-bottom: 0.5rem;
-    font-weight: 700;
-}
-.hero-content p {
-    font-size: 1.2rem;
+    padding: 1.5rem 1rem;
+    background: linear-gradient(90deg, #EF0107 0%, #97010A 100%);
     margin-bottom: 1rem;
 }
 
-/* 通用标题样式 */
-.section-title {
-    color: #EF0107;
-    font-weight: 600;
-    margin: 1rem 0 0.5rem 0;
-    font-size: 1.5rem;
-    text-align: center;
+.banner-container img {
+    height: 60px;
+    margin-bottom: 0.5rem;
 }
 
-/* 新闻卡片布局 */
-.news-container {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-    gap: 1rem;
-    margin: 1rem 0;
+.banner-container h1 {
+    color: #fff;
+    margin: 0.3rem 0;
+    font-weight: 600;
+    font-size: 1.8rem;
 }
-.news-card {
-    background-color: #fff;
-    border-radius: 6px;
-    overflow: hidden;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-    transition: transform 0.3s;
-}
-.news-card:hover {
-    transform: translateY(-3px);
-}
-.news-card img {
-    width: 100%;
-    height: 150px;
-    object-fit: cover;
-}
-.news-card-content {
-    padding: 0.75rem;
-}
-.news-card-content h4 {
-    margin: 0.5rem 0;
+
+.banner-container p {
+    color: #ffe;
     font-size: 1rem;
+}
+
+/* 调整子标题外观 */
+h2, h3 {
+    color: #EF0107; /* Arsenal 红 */
+    margin-top: 0.75rem;
+    margin-bottom: 0.5rem;
     font-weight: 600;
-    color: #EF0107;
-}
-.news-card-content p {
-    font-size: 0.9rem;
-    color: #555;
 }
 
-/* “下一场比赛” & “积分榜” 等模块的卡片 */
-.info-cards {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-    gap: 1rem;
-    margin: 1rem 0;
-}
-.info-card {
-    background: #fff;
-    border-radius: 6px;
-    padding: 1rem;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+/* 自定义按钮样式（下载按钮等） */
+div.stButton > button, div.stDownloadButton > button {
+    background-color: #EF0107 !important;
+    color: white !important;
+    border: none !important;
+    padding: 0.5em 1em !important;
+    border-radius: 4px !important;
+    font-weight: 600 !important;
+    cursor: pointer !important;
 }
 
-/* 底部页脚 */
+/* 输入组件（搜索框、下拉菜单）标签 */
+div.stTextInput > label, div.stSelectbox > label {
+    font-weight: 600;
+    color: #333;
+}
+
+/* DataFrame 表格边框与圆角 */
+[data-testid="stDataFrame"] {
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+
+/* 页脚样式 */
 footer {
     text-align: center;
-    padding: 1rem;
+    padding: 0.5rem;
     color: #555;
-    background-color: #f0f0f0;
+    background-color: #f0f0f0; /* 浅灰色背景 */
     font-size: 0.8rem;
+    position: static;
     width: 100%;
     border-top: 1px solid #ddd;
-    margin-top: 2rem;
-}
-
-/* 响应式 */
-@media (max-width: 768px) {
-    .hero-content h1 {
-        font-size: 2rem;
-    }
-    .hero-content p {
-        font-size: 1rem;
-    }
 }
 </style>
 """
 st.markdown(custom_css, unsafe_allow_html=True)
 
-########################################
-# 2) 顶部导航条 (锚点跳转)
-########################################
-navbar_html = """
-<div class="navbar">
-    <a href="#home">Home</a>
-    <a href="#news">News</a>
-    <a href="#matches">Matches</a>
-    <a href="#tickets">Tickets</a>
-    <a href="#download-data">Download Data</a>
-</div>
-"""
-st.markdown(navbar_html, unsafe_allow_html=True)
+#############################################
+# 2) Matplotlib & Seaborn 全局风格
+#############################################
+sns.set_theme(style="white")
+plt.rcParams.update({
+    "font.size": 6,           # 全局字体
+    "axes.titlesize": 6,      # 坐标轴标题大小
+    "axes.labelsize": 6,      # 坐标轴标签大小
+    "xtick.labelsize": 5,     # x轴刻度大小
+    "ytick.labelsize": 5,     # y轴刻度大小
+    "axes.spines.top": True,  # 显示上边框
+    "axes.spines.right": True # 显示右边框
+})
 
-########################################
-# 3) Hero Section - 大图背景 + 介绍语
-########################################
-st.markdown("""
-<div class="hero-section" id="home">
-  <div class="hero-overlay"></div>
-  <div class="hero-content">
-    <h1>Arsenal Ticket Market</h1>
-    <p>Your one-stop hub for Gunners match tickets, news & real-time stats!</p>
-  </div>
-</div>
-""", unsafe_allow_html=True)
+#############################################
+# 3) 顶部 Banner
+#############################################
+logo_url = "https://upload.wikimedia.org/wikipedia/en/5/53/Arsenal_FC.svg"  # Arsenal Logo 示例
+st.markdown(
+    f"""
+    <div class="banner-container">
+        <img src="{logo_url}" alt="Arsenal Logo">
+        <h1>Arsenal Ticket Market Data</h1>
+        <p>One day, one time point! Each match shows its <b>lowest price</b> and <b>remaining tickets</b> over time.</p>
+    </div>
+    """,
+    unsafe_allow_html=True
+)
 
-########################################
-# 4) 准备数据 (缓存读取 Excel 并聚合)
-########################################
+#############################################
+# 4) 读取并整合 Excel 数据
+#############################################
 @st.cache_data(show_spinner=True)
-def load_ticket_data(file_path: str):
+def load_excel_data(file_path: str):
     if not os.path.exists(file_path):
-        return None
-    import pandas as pd
-    from datetime import datetime
-
+        return None, None
     excel_file = pd.ExcelFile(file_path)
-    all_sheets = excel_file.sheet_names
+    all_sheets = excel_file.sheet_names  # e.g. ["2025-03-18", "2025-03-19", ...]
+
     dfs = []
     for sheet in all_sheets:
+        # 判断 Sheet 名是否是 YYYY-MM-DD 格式
         try:
             date_obj = datetime.strptime(sheet, "%Y-%m-%d").date()
         except ValueError:
             continue
         
         df_temp = pd.read_excel(file_path, sheet_name=sheet)
+        
         required_cols = {"Match", "Seat Type", "Min_Price", "Avg_Price", "Ticket_Count"}
         if not required_cols.issubset(df_temp.columns):
             continue
@@ -248,207 +164,266 @@ def load_ticket_data(file_path: str):
         df_temp["Date"] = date_obj
         df_temp["Min_Price"] = pd.to_numeric(df_temp["Min_Price"], errors="coerce").fillna(0).astype(float)
         df_temp["Ticket_Count"] = pd.to_numeric(df_temp["Ticket_Count"], errors="coerce").fillna(0).astype(int)
+        
+        # 只使用最关心的列
         dfs.append(df_temp[["Date", "Match", "Min_Price", "Ticket_Count"]])
 
     if not dfs:
-        return None
+        return None, None
 
     df_all = pd.concat(dfs, ignore_index=True)
-    # 按 [Date, Match] 分组，统计最低票价 & 剩余票数
-    df_agg = (
-        df_all
-        .groupby(["Date", "Match"], sort=False)
-        .agg({"Min_Price": "min", "Ticket_Count": "sum"})
-        .reset_index()
-        .rename(columns={"Min_Price": "Lowest_Price", "Ticket_Count": "Remaining_Tickets"})
-    )
-    df_agg["Date"] = df_agg["Date"].astype(str)
-    return df_agg
+    return df_all, all_sheets
 
 file_path = "price_summary.xlsx"
-df_agg = load_ticket_data(file_path)
+df_all, sheet_list = load_excel_data(file_path)
 
-########################################
-# 5) 最新新闻 (示例 - 本地化假数据)
-########################################
-# 在实际项目中，你可以改用 RSS / API 获取真实新闻
-demo_news = [
-    {
-        "title": "Arsenal secures big win in North London Derby",
-        "image": "https://upload.wikimedia.org/wikipedia/commons/c/c8/Arsenal_celebrating.jpg",
-        "summary": "The Gunners delivered a stunning performance to beat Tottenham...",
-        "link": "https://www.arsenal.com/news"  # 或者真实新闻链接
-    },
-    {
-        "title": "Injury update: Key players returning",
-        "image": "https://upload.wikimedia.org/wikipedia/commons/5/5c/Arsenal_training_session.jpg",
-        "summary": "Team medical staff provides the latest updates on injured players ahead of the weekend fixture...",
-        "link": "https://www.arsenal.com/news/injury-update"
-    },
-    {
-        "title": "Emirates Stadium expansion plan",
-        "image": "https://upload.wikimedia.org/wikipedia/commons/1/14/Emirates_Stadium_panorama.jpg",
-        "summary": "Arsenal board announces a potential expansion to increase stadium capacity by 5,000 seats...",
-        "link": "https://www.arsenal.com/news/stadium-expansion"
-    }
-]
+if df_all is None:
+    st.error("⚠️ No valid data found. Please ensure 'price_summary.xlsx' exists and is properly formatted.")
+    st.stop()
 
-########################################
-# 6) 积分榜/下一场比赛等信息 (示例 - 假数据)
-########################################
-# 你可以改用真实接口或数据库获取
-demo_table = pd.DataFrame({
-    "Position": [1, 2, 3, 4, 5],
-    "Team": ["Arsenal", "Man City", "Liverpool", "Man Utd", "Chelsea"],
-    "Points": [72, 70, 65, 60, 55]
-})
+#############################################
+# 5) 数据聚合：只统计最低票价 & 剩余票数
+#############################################
+df_agg = (
+    df_all
+    .groupby(["Date", "Match"], sort=False)
+    .agg({
+        "Min_Price": "min",       # 每场比赛的最低票价
+        "Ticket_Count": "sum"     # 剩余票数
+    })
+    .reset_index()
+    .rename(columns={
+        "Min_Price": "Lowest_Price",
+        "Ticket_Count": "Remaining_Tickets"
+    })
+    .reset_index(drop=True)
+)
 
-demo_next_match = {
-    "date": "2025-04-01",
-    "opponent": "Liverpool",
-    "venue": "Emirates Stadium",
-    "time": "15:00"
-}
+# 将 Date 转换为字符串，防止出现 T00:00:00
+df_agg["Date"] = df_agg["Date"].astype(str)
 
-########################################
-# 7) News Section
-########################################
-st.markdown('<div id="news"></div>', unsafe_allow_html=True)
-st.markdown('<h2 class="section-title">Latest News</h2>', unsafe_allow_html=True)
+max_date = df_agg["Date"].max() if not df_agg.empty else None
+df_overview_latest = df_agg[df_agg["Date"] == max_date][["Match", "Lowest_Price", "Remaining_Tickets"]]
 
-news_html = '<div class="news-container">'
-for item in demo_news:
-    news_html += f"""
-    <div class="news-card">
-        <img src="{item['image']}" alt="news image">
-        <div class="news-card-content">
-            <h4>{item['title']}</h4>
-            <p>{item['summary']}</p>
-            <a href="{item['link']}" target="_blank">Read more</a>
-        </div>
-    </div>
-    """
-news_html += '</div>'
-st.markdown(news_html, unsafe_allow_html=True)
+#############################################
+# 6) Streamlit 界面布局 - Tabs
+#############################################
+tab1, tab2, tab3, tab4 = st.tabs(["Overview", "Price Trends", "Raw Data", "Arsenal News"])
 
-########################################
-# 8) Matches Section (下一场比赛 & 积分榜)
-########################################
-st.markdown('<div id="matches"></div>', unsafe_allow_html=True)
-st.markdown('<h2 class="section-title">Matches & Standings</h2>', unsafe_allow_html=True)
+# ============ Tab 1: Overview ============
+with tab1:
+    st.subheader("Latest Date Overview")
+    if max_date is None or df_overview_latest.empty:
+        st.warning("No data for latest date.")
+    else:
+        st.write(f"**Latest Date**: {max_date}")
+        st.write("Below shows each match's Lowest_Price & Remaining_Tickets on this date:")
+        st.dataframe(df_overview_latest)
 
-# 使用 info-cards 布局
-st.markdown('<div class="info-cards">', unsafe_allow_html=True)
+# ============ Tab 2: Price Trends ============
+with tab2:
+    st.subheader("Daily Price & Tickets Trend (One day, one point) - Each Match Separately")
 
-# Card 1: 下一场比赛
-next_match_html = f"""
-<div class="info-card">
-  <h3 style="margin-top:0; color:#EF0107;">Next Match</h3>
-  <p><b>Date:</b> {demo_next_match['date']}</p>
-  <p><b>Opponent:</b> {demo_next_match['opponent']}</p>
-  <p><b>Venue:</b> {demo_next_match['venue']}</p>
-  <p><b>Kick-off:</b> {demo_next_match['time']}</p>
-</div>
-"""
-st.markdown(next_match_html, unsafe_allow_html=True)
+    if df_agg.empty:
+        st.warning("No data to plot.")
+    else:
+        all_matches = list(df_agg["Match"].unique())
+        search_term = st.text_input(
+            "Search matches (Price Trends)",
+            "",
+            help="Type partial keywords to filter the matches below."
+        )
+        filtered_matches = [m for m in all_matches if search_term.lower() in m.lower()]
+        selected_match = st.selectbox("Select a match to view charts", ["All"] + filtered_matches)
 
-# Card 2: 积分榜
-st.markdown('<div class="info-card">', unsafe_allow_html=True)
-st.markdown('<h3 style="margin-top:0; color:#EF0107;">Premier League Table</h3>', unsafe_allow_html=True)
-st.dataframe(demo_table)
-st.markdown('</div>', unsafe_allow_html=True)
-
-st.markdown('</div>', unsafe_allow_html=True)  # 结束 info-cards
-
-########################################
-# 9) Tickets Section - 交互式图表 (Plotly)
-########################################
-st.markdown('<div id="tickets"></div>', unsafe_allow_html=True)
-st.markdown('<h2 class="section-title">Ticket Price Analysis</h2>', unsafe_allow_html=True)
-
-if df_agg is None or df_agg.empty:
-    st.warning("No ticket data available.")
-else:
-    all_matches = sorted(df_agg["Match"].unique())
-    selected_match = st.selectbox("Select a match to visualize:", all_matches)
-    df_match = df_agg[df_agg["Match"] == selected_match].copy()
-
-    # 将 Date 转回 datetime，方便 Plotly 显示
-    df_match["Date_dt"] = pd.to_datetime(df_match["Date"], format="%Y-%m-%d")
-    # Plotly 交互式折线图
-    fig = px.line(
-        df_match,
-        x="Date_dt",
-        y="Lowest_Price",
-        markers=True,
-        title=f"Lowest Ticket Price Over Time - {selected_match}",
-        labels={"Date_dt": "Date", "Lowest_Price": "Price (£)"}
-    )
-    fig.update_traces(line_color="#EF0107")
-    fig.update_layout(
-        xaxis=dict(tickformat="%m-%d"),
-        hovermode="x unified"
-    )
-    st.plotly_chart(fig, use_container_width=True)
-
-    # 同时可视化剩余票数
-    fig2 = px.line(
-        df_match,
-        x="Date_dt",
-        y="Remaining_Tickets",
-        markers=True,
-        title=f"Remaining Tickets Over Time - {selected_match}",
-        labels={"Date_dt": "Date", "Remaining_Tickets": "Tickets"}
-    )
-    fig2.update_traces(line_color="navy")
-    fig2.update_layout(
-        xaxis=dict(tickformat="%m-%d"),
-        hovermode="x unified"
-    )
-    st.plotly_chart(fig2, use_container_width=True)
-
-########################################
-# 10) 下载数据区 (带提取码)
-########################################
-st.markdown('<div id="download-data"></div>', unsafe_allow_html=True)
-st.markdown('<h2 class="section-title">Download Raw Data</h2>', unsafe_allow_html=True)
-
-if df_agg is not None and not df_agg.empty:
-    st.dataframe(df_agg)
-    if "show_passcode_input" not in st.session_state:
-        st.session_state["show_passcode_input"] = False
-
-    download_clicked = st.button("Download CSV")
-    if download_clicked:
-        st.session_state["show_passcode_input"] = True
-
-    if st.session_state["show_passcode_input"]:
-        st.info("We need a passcode to proceed with the download. Please enter your passcode.")
-        passcode_input = st.text_input("Enter passcode:", value="", type="password")
-        valid_passcodes = [f"Trek{i}" for i in range(1, 10)]
-        if passcode_input == "":
-            st.info("Please enter the passcode above.")
-        elif passcode_input in valid_passcodes:
-            st.success("Verification success! You can download the CSV file now.")
-            csv_data = df_agg.to_csv(index=False).encode("utf-8")
-            st.download_button(
-                label="📥 Download CSV",
-                data=csv_data,
-                file_name="daily_lowest_price_and_tickets.csv",
-                mime="text/csv"
-            )
+        if selected_match == "All":
+            matches_to_plot = filtered_matches
         else:
-            st.error("Invalid passcode. Please try again.")
-else:
-    st.warning("No aggregated data to download.")
+            matches_to_plot = [selected_match]
 
-########################################
-# 11) 页脚
-########################################
+        if not matches_to_plot:
+            st.warning("No matches found with the given search term.")
+        else:
+            for match_name in matches_to_plot:
+                df_match = df_agg[df_agg["Match"] == match_name]
+                if df_match.empty:
+                    continue
+
+                st.markdown(f"### {match_name}")
+                col1, col2 = st.columns(2)
+                
+                # -- 图1: Lowest Price --
+                with col1:
+                    st.subheader("Lowest Price Trend")
+                    fig1, ax1 = plt.subplots(figsize=(3, 2.2))
+                    
+                    # 将日期转换为 datetime 以便绘图
+                    date_x = pd.to_datetime(df_match["Date"], format="%Y-%m-%d")
+                    
+                    ax1.plot(
+                        date_x,
+                        df_match["Lowest_Price"],
+                        marker="o",
+                        markersize=3,
+                        linewidth=1.0,
+                        color="#EF0107",
+                        label="Lowest Price"
+                    )
+                    
+                    # 在每个点上方标注数值
+                    for x_val, y_val in zip(date_x, df_match["Lowest_Price"]):
+                        ax1.text(
+                            x_val, y_val + 1,
+                            f"{int(y_val)}",
+                            ha='center', va='bottom',
+                            fontsize=5,
+                            color="#EF0107"
+                        )
+                    
+                    ax1.set_xlabel("Date", fontsize=6)
+                    ax1.set_ylabel("Price (£)", fontsize=6)
+                    ax1.legend(fontsize=5)
+                    
+                    for spine in ["top", "right", "bottom", "left"]:
+                        ax1.spines[spine].set_visible(True)
+                    ax1.tick_params(axis='both', which='major', length=4, width=1)
+
+                    ax1.xaxis.set_major_locator(mdates.DayLocator())
+                    ax1.xaxis.set_major_formatter(mdates.DateFormatter('%m-%d'))
+                    plt.xticks(rotation=45)
+                    
+                    plt.tight_layout()
+                    st.pyplot(fig1)
+                
+                # -- 图2: Remaining Tickets --
+                with col2:
+                    st.subheader("Remaining Tickets Trend")
+                    fig2, ax2 = plt.subplots(figsize=(3, 2.2))
+                    
+                    date_x = pd.to_datetime(df_match["Date"], format="%Y-%m-%d")
+                    ax2.plot(
+                        date_x,
+                        df_match["Remaining_Tickets"],
+                        marker="o",
+                        markersize=3,
+                        linewidth=1.0,
+                        color="navy",
+                        label="Tickets"
+                    )
+                    
+                    for x_val, y_val in zip(date_x, df_match["Remaining_Tickets"]):
+                        ax2.text(
+                            x_val, y_val + 1,
+                            f"{int(y_val)}",
+                            ha='center', va='bottom',
+                            fontsize=5,
+                            color="navy"
+                        )
+                    
+                    ax2.set_xlabel("Date", fontsize=6)
+                    ax2.set_ylabel("Tickets", fontsize=6)
+                    ax2.legend(fontsize=5)
+                    
+                    for spine in ["top", "right", "bottom", "left"]:
+                        ax2.spines[spine].set_visible(True)
+                    ax2.tick_params(axis='both', which='major', length=4, width=1)
+
+                    ax2.xaxis.set_major_locator(mdates.DayLocator())
+                    ax2.xaxis.set_major_formatter(mdates.DateFormatter('%m-%d'))
+                    plt.xticks(rotation=45)
+                    
+                    plt.tight_layout()
+                    st.pyplot(fig2)
+                
+                st.markdown("<hr>", unsafe_allow_html=True)
+
+# ============ Tab 3: Raw Data ============
+with tab3:
+    st.subheader("Raw Aggregated Data (Per Match, Per Day)")
+
+    all_matches = list(df_agg["Match"].unique())
+    search_term_raw = st.text_input(
+        "Search matches (Raw Data)",
+        "",
+        help="Type partial keywords to filter the matches below."
+    )
+    filtered_matches_raw = [m for m in all_matches if search_term_raw.lower() in m.lower()]
+    selected_match_raw = st.selectbox("Select a match to view raw data", ["All"] + filtered_matches_raw)
+
+    if not filtered_matches_raw:
+        st.warning("No matches found with the given search term.")
+    else:
+        if selected_match_raw == "All":
+            matches_to_show = filtered_matches_raw
+        else:
+            matches_to_show = [selected_match_raw]
+
+        if not matches_to_show:
+            st.warning("No matches found with the given search term.")
+        else:
+            df_display = df_agg[df_agg["Match"].isin(matches_to_show)]
+            st.dataframe(df_display)
+
+            if "show_passcode_input" not in st.session_state:
+                st.session_state["show_passcode_input"] = False
+
+            download_clicked = st.button("Download CSV")
+            if download_clicked:
+                st.session_state["show_passcode_input"] = True
+
+            if st.session_state["show_passcode_input"]:
+                st.info("We need a passcode to proceed with the download. Please enter your passcode.")
+                passcode_input = st.text_input("Enter passcode:", value="", type="password")
+                valid_passcodes = [f"Trek{i}" for i in range(1, 10)]
+                if passcode_input == "":
+                    st.info("Please enter the passcode above.")
+                elif passcode_input in valid_passcodes:
+                    st.success("Verification success! You can download the CSV file now.")
+                    csv_data = df_display.to_csv(index=False).encode("utf-8")
+                    st.download_button(
+                        label="📥 Download CSV",
+                        data=csv_data,
+                        file_name="daily_lowest_price_and_tickets.csv",
+                        mime="text/csv"
+                    )
+                else:
+                    st.error("Invalid passcode. Please try again.")
+
+# ============ Tab 4: Arsenal News ============
+with tab4:
+    st.subheader("Arsenal Official Twitter (X) Timeline")
+
+    # 通过 CSS 限制 Timeline 宽度为600px，并在小屏时自适应
+    # data-chrome="noheader nofooter" 去除顶部账号名和底部链接
+    # data-width="600" + data-height="2000" + scrolling=True
+    # 让图片不会过于巨大，同时在更小屏幕时有一定自适应
+    twitter_embed_code = """
+    <style>
+    .twitter-timeline {
+      width: 600px !important;
+      max-width: 100% !important;  /* 在小屏幕上自动缩放 */
+      margin: 0 auto !important;
+    }
+    </style>
+    <a class="twitter-timeline"
+       data-width="600"
+       data-height="2000"
+       data-theme="light"
+       data-chrome="noheader nofooter"
+       href="https://twitter.com/Arsenal?ref_src=twsrc%5Etfw">
+       Posts from @Arsenal
+    </a>
+    <script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
+    """
+    # 给 components.html 一个稍大的height，并允许滚动
+    components.html(twitter_embed_code, height=2100, scrolling=True)
+
+# ---------------------------
+# 固定页脚（可添加版权声明等）
+# ---------------------------
 footer_html = """
 <footer>
-    © 2025 Arsenal Ticket Market. All Rights Reserved. |
-    <a href="#home">Back to top</a>
+    © 2025 Arsenal Ticket Market. All Rights Reserved.
 </footer>
 """
 st.markdown(footer_html, unsafe_allow_html=True)
