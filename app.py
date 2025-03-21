@@ -426,14 +426,16 @@ with tab4:
     # 给 components.html 一个稍大的height，并允许滚动
     components.html(twitter_embed_code, height=2100, scrolling=True)
 
-# ============ Tab 5: EPL Table ============ (新加的)
+# =========== Tab 5: EPL Table =========== (新加的)
 with tab5:
     st.subheader("Live Premier League Table (API-SPORTS Widget)")
+
+    API_KEY = "346cf95c512365597a9539c975530fb9"  # 替换成你自己的 Key
 
     widget_code = f"""
     <div id="wg-api-football-standings"
          data-host="api-football.com"
-         data-key="{346cf95c512365597a9539c975530fb9}"
+         data-key="{API_KEY}"
          data-league="39"
          data-season="2023"
          data-show-logos="true"
@@ -445,7 +447,9 @@ with tab5:
             src="https://widgets.api-sports.io/2.0.3/widgets.js">
     </script>
     """
+
     components.html(widget_code, height=800, scrolling=True)
+   components.html(widget_code, height=800, scrolling=True)
     
 # ---------------------------
 # 固定页脚（可添加版权声明等）
