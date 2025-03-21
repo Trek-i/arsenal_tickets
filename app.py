@@ -5,6 +5,8 @@ import seaborn as sns
 import matplotlib.dates as mdates
 import os
 from datetime import datetime
+import streamlit.components.v1 as components
+from st_aggrid import AgGrid  # pip install streamlit-aggrid
 
 #############################################
 # 0) 首先设置页面配置 (必须在任何 st.xxx 调用之前)
@@ -36,29 +38,32 @@ html, body {
     padding: 1rem 2rem 2rem 2rem; /* 自定义页面内边距 */
 }
 
-/* 顶部主 Banner 的背景渐变（阿森纳红色系） */
+/* 顶部主 Banner 的背景：增加背景图（可选）及渐变颜色，内边距调整更紧凑 */
 .banner-container {
     text-align: center;
-    padding: 2rem 1rem;
+    padding: 1.5rem 1rem;
     background: linear-gradient(90deg, #EF0107 0%, #97010A 100%);
+    /* 如需添加背景图，可取消下一行注释，并替换 URL */
+    /* background-image: url("https://example.com/your_banner_image.jpg"); */
+    background-size: cover;
     margin-bottom: 1rem;
 }
 
 .banner-container img {
-    height: 80px;
-    margin-bottom: 1rem;
+    height: 60px;
+    margin-bottom: 0.5rem;
 }
 
 .banner-container h1 {
     color: #fff;
-    margin: 0.5rem 0;
+    margin: 0.3rem 0;
     font-weight: 600;
-    font-size: 2rem;
+    font-size: 1.8rem;
 }
 
 .banner-container p {
     color: #ffe;
-    font-size: 1.1rem;
+    font-size: 1rem;
 }
 
 /* 调整子标题外观 */
@@ -92,19 +97,16 @@ div.stTextInput > label, div.stSelectbox > label {
     border-radius: 4px;
 }
 
-/* 页脚固定在底部 */
+/* 页脚样式 */
 footer {
     text-align: center;
-    padding: 1rem;
-    color: #fff;
-    background-color: #000;
-    font-size: 0.9rem;
-    position: fixed;
-    bottom: 0;
+    padding: 0.5rem;
+    color: #555;
+    background-color: #f0f0f0; /* 浅灰色背景 */
+    font-size: 0.8rem;
+    position: static;
     width: 100%;
-    left: 0;
-    z-index: 999;
-    border-top: 1px solid #333;
+    border-top: 1px solid #ddd;
 }
 </style>
 """
@@ -133,7 +135,7 @@ st.markdown(
     <div class="banner-container">
         <img src="{logo_url}" alt="Arsenal Logo">
         <h1>Arsenal Ticket Market Data</h1>
-        <p>One day, one time point! Each match shows its <b>lowest price</b> and <b>remaining tickets</b> over time.</p>
+        <p>One day, one time point! Each match shows its <b>lowest price</b>, <b>average price</b> and <b>remaining tickets</b> over time.</p>
     </div>
     """,
     unsafe_allow_html=True
@@ -149,29 +151,22 @@ def load_excel_data(file_path: str):
     excel_file = pd.ExcelFile(file_path)
     all_sheets = excel_file.sheet_names  # e.g. ["2025-03-18", "2025-03-19", ...]
 
-    # 用于收集所有满足条件的 Sheet 数据
     dfs = []
     for sheet in all_sheets:
-        # 判断 Sheet 名是否是 YYYY-MM-DD 格式
         try:
             date_obj = datetime.strptime(sheet, "%Y-%m-%d").date()
         except ValueError:
-            # 如果 Sheet 名不是日期格式，跳过
             continue
         
-        # 读取当前 Sheet
         df_temp = pd.read_excel(file_path, sheet_name=sheet)
         
-        # 确保含有关键列
         required_cols = {"Match", "Seat Type", "Min_Price", "Avg_Price", "Ticket_Count"}
         if not required_cols.issubset(df_temp.columns):
             continue
         
-        # 加 "Date" 列
         df_temp["Date"] = date_obj
-        
-        # 转换列类型
         df_temp["Min_Price"] = pd.to_numeric(df_temp["Min_Price"], errors="coerce").fillna(0).astype(float)
+        df_temp["Avg_Price"] = pd.to_numeric(df_temp["Avg_Price"], errors="coerce").fillna(0).astype(float)
         df_temp["Ticket_Count"] = pd.to_numeric(df_temp["Ticket_Count"], errors="coerce").fillna(0).astype(int)
         
         dfs.append(df_temp)
@@ -179,7 +174,6 @@ def load_excel_data(file_path: str):
     if not dfs:
         return None, None
 
-    # 合并所有 Sheet 数据
     df_all = pd.concat(dfs, ignore_index=True)
     return df_all, all_sheets
 
@@ -191,33 +185,32 @@ if df_all is None:
     st.stop()
 
 #############################################
-# 5) 数据聚合：对 [Date, Match] 分组
+# 5) 数据聚合：对 [Date, Match] 分组（增加平均票价统计）
 #############################################
 df_agg = (
     df_all
     .groupby(["Date", "Match"], sort=False)
     .agg({
         "Min_Price": "min",       # 每场比赛的最低票价
+        "Avg_Price": "mean",      # 每场比赛的平均票价
         "Ticket_Count": "sum"     # 剩余票数
     })
     .reset_index()
     .rename(columns={
         "Min_Price": "Lowest_Price",
+        "Avg_Price": "Average_Price",
         "Ticket_Count": "Remaining_Tickets"
     })
     .reset_index(drop=True)
 )
 
-# 找到最新日期
 max_date = df_agg["Date"].max() if not df_agg.empty else None
-
-# 只显示最新日期下的每场比赛信息 (用于 Overview)
-df_overview_latest = df_agg[df_agg["Date"] == max_date][["Match", "Lowest_Price", "Remaining_Tickets"]]
+df_overview_latest = df_agg[df_agg["Date"] == max_date][["Match", "Lowest_Price", "Average_Price", "Remaining_Tickets"]]
 
 #############################################
 # 6) Streamlit 界面布局 - Tabs
 #############################################
-tab1, tab2, tab3 = st.tabs(["Overview", "Price Trends", "Raw Data"])
+tab1, tab2, tab3, tab4 = st.tabs(["Overview", "Price Trends", "Raw Data", "Arsenal News"])
 
 # ============ Tab 1: Overview ============
 with tab1:
@@ -226,7 +219,7 @@ with tab1:
         st.warning("No data for latest date.")
     else:
         st.write(f"**Latest Date**: {max_date}")
-        st.write("Below shows each match's Lowest_Price & Remaining_Tickets on this date:")
+        st.write("Below shows each match's Lowest Price, Average Price & Remaining Tickets on this date:")
         st.dataframe(df_overview_latest)
 
 # ============ Tab 2: Price Trends ============
@@ -236,158 +229,90 @@ with tab2:
     if df_agg.empty:
         st.warning("No data to plot.")
     else:
-        # 获取比赛列表（保持原出现顺序）
         all_matches = list(df_agg["Match"].unique())
-
-        # 1) 关键词搜索
-        search_term = st.text_input(
-            "Search matches (Price Trends)",
-            "",
-            help="Type partial keywords to filter the matches below."
-        )
-        # 根据搜索词进行筛选
+        search_term = st.text_input("Search matches (Price Trends)", "", help="Type partial keywords to filter the matches below.")
         filtered_matches = [m for m in all_matches if search_term.lower() in m.lower()]
-
-        # 2) 下拉菜单
         selected_match = st.selectbox("Select a match to view charts", ["All"] + filtered_matches)
 
-        # 确定要显示的比赛列表
-        if selected_match == "All":
-            matches_to_plot = filtered_matches
-        else:
-            matches_to_plot = [selected_match]
+        matches_to_plot = filtered_matches if selected_match == "All" else [selected_match]
 
-        # 若搜索结果为空，则提示
         if not matches_to_plot:
             st.warning("No matches found with the given search term.")
         else:
-            # 按出现顺序依次画图
             for match_name in matches_to_plot:
                 df_match = df_agg[df_agg["Match"] == match_name]
                 if df_match.empty:
                     continue
 
-                # 比赛标题
                 st.markdown(f"### {match_name}")
                 col1, col2 = st.columns(2)
                 
-                # -- 图1: Lowest Price --
+                # -- 图1: Lowest Price & Average Price Trend --
                 with col1:
-                    st.subheader("Lowest Price Trend")
+                    st.subheader("Price Trend")
                     fig1, ax1 = plt.subplots(figsize=(3, 2.2))
+                    ax1.plot(df_match["Date"], df_match["Lowest_Price"], marker="o", markersize=3, linewidth=1.0, color="#EF0107", label="Lowest Price")
+                    ax1.plot(df_match["Date"], df_match["Average_Price"], marker="s", markersize=3, linewidth=1.0, color="green", label="Average Price")
                     
-                    ax1.plot(
-                        df_match["Date"], 
-                        df_match["Lowest_Price"],
-                        marker="o",
-                        markersize=3,      # marker 大小
-                        linewidth=1.0,     # 线条粗细
-                        color="#EF0107",   # Arsenal 红
-                        label="Lowest Price"
-                    )
-                    
-                    # 在每个点上方标注数值
                     for x_val, y_val in zip(df_match["Date"], df_match["Lowest_Price"]):
-                        ax1.text(
-                            x_val, y_val + 1,
-                            f"{int(y_val)}",
-                            ha='center', va='bottom',
-                            fontsize=5,
-                            color="#EF0107"
-                        )
+                        ax1.text(x_val, y_val + 1, f"{int(y_val)}", ha='center', va='bottom', fontsize=5, color="#EF0107")
+                    for x_val, y_val in zip(df_match["Date"], df_match["Average_Price"]):
+                        ax1.text(x_val, y_val + 1, f"{y_val:.1f}", ha='center', va='bottom', fontsize=5, color="green")
                     
                     ax1.set_xlabel("Date", fontsize=6)
                     ax1.set_ylabel("Price (£)", fontsize=6)
                     ax1.legend(fontsize=5)
-                    
-                    # 打开全部 spines
                     for spine in ["top", "right", "bottom", "left"]:
                         ax1.spines[spine].set_visible(True)
-                    # 让刻度线更明显
                     ax1.tick_params(axis='both', which='major', length=4, width=1)
-
-                    # 设置 X 轴日期格式
                     ax1.xaxis.set_major_locator(mdates.DayLocator())
                     ax1.xaxis.set_major_formatter(mdates.DateFormatter('%m-%d'))
                     plt.xticks(rotation=45)
-                    
                     plt.tight_layout()
                     st.pyplot(fig1)
                 
-                # -- 图2: Remaining Tickets --
+                # -- 图2: Remaining Tickets Trend --
                 with col2:
                     st.subheader("Remaining Tickets Trend")
                     fig2, ax2 = plt.subplots(figsize=(3, 2.2))
-                    
-                    ax2.plot(
-                        df_match["Date"], 
-                        df_match["Remaining_Tickets"],
-                        marker="o",
-                        markersize=3,
-                        linewidth=1.0,
-                        color="navy", 
-                        label="Tickets"
-                    )
+                    ax2.plot(df_match["Date"], df_match["Remaining_Tickets"], marker="o", markersize=3, linewidth=1.0, color="navy", label="Tickets")
                     
                     for x_val, y_val in zip(df_match["Date"], df_match["Remaining_Tickets"]):
-                        ax2.text(
-                            x_val, y_val + 1,
-                            f"{int(y_val)}",
-                            ha='center', va='bottom',
-                            fontsize=5,
-                            color="navy"
-                        )
+                        ax2.text(x_val, y_val + 1, f"{int(y_val)}", ha='center', va='bottom', fontsize=5, color="navy")
                     
                     ax2.set_xlabel("Date", fontsize=6)
                     ax2.set_ylabel("Tickets", fontsize=6)
                     ax2.legend(fontsize=5)
-                    
-                    # 打开全部 spines
                     for spine in ["top", "right", "bottom", "left"]:
                         ax2.spines[spine].set_visible(True)
-                    # 让刻度线更明显
                     ax2.tick_params(axis='both', which='major', length=4, width=1)
-
                     ax2.xaxis.set_major_locator(mdates.DayLocator())
                     ax2.xaxis.set_major_formatter(mdates.DateFormatter('%m-%d'))
                     plt.xticks(rotation=45)
-                    
                     plt.tight_layout()
                     st.pyplot(fig2)
                 
-                # 分割线
                 st.markdown("<hr>", unsafe_allow_html=True)
 
 # ============ Tab 3: Raw Data ============
 with tab3:
     st.subheader("Raw Aggregated Data (Per Match, Per Day)")
-
-    # 1) 先搜索与下拉筛选比赛
     all_matches = list(df_agg["Match"].unique())
-    search_term_raw = st.text_input(
-        "Search matches (Raw Data)",
-        "",
-        help="Type partial keywords to filter the matches below."
-    )
+    search_term_raw = st.text_input("Search matches (Raw Data)", "", help="Type partial keywords to filter the matches below.")
     filtered_matches_raw = [m for m in all_matches if search_term_raw.lower() in m.lower()]
     selected_match_raw = st.selectbox("Select a match to view raw data", ["All"] + filtered_matches_raw)
 
     if not filtered_matches_raw:
         st.warning("No matches found with the given search term.")
     else:
-        if selected_match_raw == "All":
-            matches_to_show = filtered_matches_raw
-        else:
-            matches_to_show = [selected_match_raw]
-
+        matches_to_show = filtered_matches_raw if selected_match_raw == "All" else [selected_match_raw]
         if not matches_to_show:
             st.warning("No matches found with the given search term.")
         else:
             df_display = df_agg[df_agg["Match"].isin(matches_to_show)]
-            st.dataframe(df_display)
+            # 使用 AgGrid 实现分页、排序等功能
+            AgGrid(df_display, enable_enterprise_modules=False, height=300, fit_columns_on_grid_load=True)
 
-            # 2) 点击按钮后才显示提取码输入框
-            # 使用 session_state 控制逻辑
             if "show_passcode_input" not in st.session_state:
                 st.session_state["show_passcode_input"] = False
 
@@ -398,21 +323,26 @@ with tab3:
             if st.session_state["show_passcode_input"]:
                 st.info("We need a passcode to proceed with the download. Please enter your passcode.")
                 passcode_input = st.text_input("Enter passcode:", value="", type="password")
-
                 valid_passcodes = [f"Trek{i}" for i in range(1, 10)]
                 if passcode_input == "":
                     st.info("Please enter the passcode above.")
                 elif passcode_input in valid_passcodes:
                     st.success("Verification success! You can download the CSV file now.")
                     csv_data = df_display.to_csv(index=False).encode("utf-8")
-                    st.download_button(
-                        label="📥 Download CSV",
-                        data=csv_data,
-                        file_name="daily_lowest_price_and_tickets.csv",
-                        mime="text/csv"
-                    )
+                    st.download_button(label="📥 Download CSV", data=csv_data, file_name="daily_lowest_price_and_tickets.csv", mime="text/csv")
                 else:
                     st.error("Invalid passcode. Please try again.")
+
+# ============ Tab 4: Arsenal News ============
+with tab4:
+    st.subheader("Arsenal Official Twitter (X) Timeline")
+    twitter_embed_code = """
+    <a class="twitter-timeline" href="https://twitter.com/Arsenal?ref_src=twsrc%5Etfw">
+    Tweets by Arsenal
+    </a>
+    <script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
+    """
+    components.html(twitter_embed_code, height=600)
 
 # ---------------------------
 # 固定页脚（可添加版权声明等）
