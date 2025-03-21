@@ -434,7 +434,7 @@ with tab5:
          data-host="api-football.com"
          data-key="346cf95c512365597a9539c975530fb9"
          data-league="39"
-         data-season="2023"
+         data-season="2024"
          data-show-logos="true"
          data-show-errors="true"
          class="api_football_loader">
