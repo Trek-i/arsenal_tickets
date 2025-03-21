@@ -436,7 +436,7 @@ with tab5:
          data-key="346cf95c512365597a9539c975530fb9"   /* 替换成你的API Key */
          data-league="39"         /* 英超ID */
          data-season="2023"       /* 2023=2023/2024赛季 */
-         data-show-errors="false"
+         data-show-errors="true"
          data-show-logos="true"
          class="api_football_loader">
     </div>
