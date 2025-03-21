@@ -433,7 +433,7 @@ with tab5:
     widget_code = """
     <div id="wg-api-football-standings"
          data-host="api-football.com"
-         data-key="YOUR_API_KEY"   /* 替换成你的API Key */
+         data-key="346cf95c512365597a9539c975530fb9"   /* 替换成你的API Key */
          data-league="39"         /* 英超ID */
          data-season="2023"       /* 2023=2023/2024赛季 */
          data-show-errors="false"
