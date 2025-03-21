@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
+import json
 import matplotlib.dates as mdates
 import requests
 import pandas as pd
@@ -429,12 +430,12 @@ with tab4:
 with tab5:
     st.subheader("Live Premier League Table (API-SPORTS Widget)")
 
-    widget_code = """
+    widget_code = f"""
     <div id="wg-api-football-standings"
          data-host="api-football.com"
-         data-key="346cf95c512365597a9539c975530fb9"
+         data-key="{API_KEY}"
          data-league="39"
-         data-season="2024"
+         data-season="2023"
          data-show-logos="true"
          data-show-errors="true"
          class="api_football_loader">
