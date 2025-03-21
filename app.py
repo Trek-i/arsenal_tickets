@@ -429,15 +429,14 @@ with tab4:
 with tab5:
     st.subheader("Live Premier League Table (API-SPORTS Widget)")
 
-    # 这里是官方小部件代码 (示例)
     widget_code = """
     <div id="wg-api-football-standings"
          data-host="api-football.com"
-         data-key="346cf95c512365597a9539c975530fb9"   /* 替换成你的API Key */
-         data-league="39"         /* 英超ID */
-         data-season="2023"       /* 2023=2023/2024赛季 */
-         data-show-errors="true"
+         data-key="346cf95c512365597a9539c975530fb9"
+         data-league="39"
+         data-season="2023"
          data-show-logos="true"
+         data-show-errors="true"
          class="api_football_loader">
     </div>
 
@@ -445,8 +444,6 @@ with tab5:
             src="https://widgets.api-sports.io/2.0.3/widgets.js">
     </script>
     """
-
-    # 嵌入到 Streamlit
     components.html(widget_code, height=800, scrolling=True)
     
 # ---------------------------
