@@ -435,7 +435,7 @@ with tab5:
          data-host="api-football.com"
          data-league="39"       /* 英超ID */
          data-team=""           /* 如果只想看某个球队，可以填ID，否则留空 */
-         data-season="2024"     /* 赛季：2023=2023/2024赛季，具体可查文档 */
+         data-season="2023"     /* 赛季：2023=2023/2024赛季，具体可查文档 */
          data-key="346cf95c512365597a9539c975530fb9"/* 这里替换成你自己的API Key */
          data-show-errors="false"
          data-show-logos="true"
