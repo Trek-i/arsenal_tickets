@@ -3,6 +3,8 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 import matplotlib.dates as mdates
+import requests
+import pandas as pd
 import os
 from datetime import datetime
 import streamlit.components.v1 as components
@@ -208,8 +210,13 @@ df_overview_latest = df_agg[df_agg["Date"] == max_date][["Match", "Lowest_Price"
 #############################################
 # 6) Streamlit 界面布局 - Tabs
 #############################################
-tab1, tab2, tab3, tab4 = st.tabs(["Overview", "Price Trends", "Raw Data", "Arsenal News"])
-
+tab1, tab2, tab3, tab4, tab5 = st.tabs([
+    "Overview", 
+    "Price Trends", 
+    "Raw Data", 
+    "Arsenal News",
+    "EPL Table"  # ← 新增
+])
 # ============ Tab 1: Overview ============
 with tab1:
     st.subheader("Latest Date Overview")
@@ -418,6 +425,31 @@ with tab4:
     # 给 components.html 一个稍大的height，并允许滚动
     components.html(twitter_embed_code, height=2100, scrolling=True)
 
+# ============ Tab 5: EPL Table ============ (新加的)
+with tab5:
+    st.subheader("Live Premier League Table (API-SPORTS Widget)")
+    
+    # 下面是官方 widget 代码
+    widget_code = """
+    <div id="wg-api-football-standings"
+         data-host="api-football.com"
+         data-league="39"       /* 英超ID */
+         data-team=""           /* 如果只想看某个球队，可以填ID，否则留空 */
+         data-season="2023"     /* 赛季：2023=2023/2024赛季，具体可查文档 */
+         data-key="YOUR_API_KEY"/* 这里替换成你自己的API Key */
+         data-show-errors="false"
+         data-show-logos="true"
+         class="api_football_loader">
+    </div>
+
+    <script type="module"
+            src="https://widgets.api-sports.io/2.0/3/widgets.js">
+    </script>
+    """
+
+    # 将上面的 HTML 代码嵌入 Streamlit
+    components.html(widget_code, height=800, scrolling=True)
+    
 # ---------------------------
 # 固定页脚（可添加版权声明等）
 # ---------------------------
