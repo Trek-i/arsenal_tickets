@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
+import streamlit as st
 import seaborn as sns
 import json
 import matplotlib.dates as mdates
@@ -428,28 +429,33 @@ with tab4:
 
 # =========== Tab 5: EPL Table =========== (新加的)
 
-with tab5:
-    st.subheader("Live Premier League Table (API-SPORTS Widget)")
+API_KEY = "346cf95c512365597a9539c975530fb9"
+url = "https://v3.football.api-sports.io/standings"
+params = {"league": 39, "season": 2023}
+headers = {"x-apisports-key": API_KEY}
+resp = requests.get(url, params=params, headers=headers)
+data = resp.json()
 
-    API_KEY = "346cf95c512365597a9539c975530fb9"  # 替换成你自己的 Key
+# 解析 JSON
+standings = data["response"][0]["league"]["standings"][0]
+rows = []
+for team_info in standings:
+    rows.append({
+        "Position": team_info["rank"],
+        "Team": team_info["team"]["name"],
+        "Points": team_info["points"],
+        "Played": team_info["all"]["played"],
+        "Won": team_info["all"]["win"],
+        "Draw": team_info["all"]["draw"],
+        "Lost": team_info["all"]["lose"],
+        "Goals For": team_info["all"]["goals"]["for"],
+        "Goals Against": team_info["all"]["goals"]["against"],
+        "Goal Diff": team_info["goalsDiff"]
+    })
 
-    widget_code = f"""
-    <div id="wg-api-football-standings"
-         data-host="api-football.com"
-         data-key="{API_KEY}"
-         data-league="39"
-         data-season="2023"
-         data-show-logos="true"
-         data-show-errors="true"
-         class="api_football_loader">
-    </div>
-
-    <script async type="module"
-            src="https://widgets.api-sports.io/2.0.3/widgets.js">
-    </script>
-    """
-
-    components.html(widget_code, height=800, scrolling=True)
+df = pd.DataFrame(rows)
+st.title("EPL Table - 2023/2024 Season (via REST API)")
+st.dataframe(df)
   
 # ---------------------------
 # 固定页脚（可添加版权声明等）
