@@ -433,7 +433,7 @@ with tab5:
     widget_code = f"""
     <div id="wg-api-football-standings"
          data-host="api-football.com"
-         data-key="{API_KEY}"
+         data-key="{346cf95c512365597a9539c975530fb9}"
          data-league="39"
          data-season="2023"
          data-show-logos="true"
