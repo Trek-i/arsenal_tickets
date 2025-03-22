@@ -427,48 +427,6 @@ with tab4:
     # 给 components.html 一个稍大的height，并允许滚动
     components.html(twitter_embed_code, height=2100, scrolling=True)
 
-# =========== Tab 5: EPL Table =========== (新加的)
-with tab5:
-    st.title("EPL Table - 2023/2024 Season")
-
-    API_KEY = "346cf95c512365597a9539c975530fb9"
-    url = "https://v3.football.api-sports.io/standings"
-    params = {"league": 39, "season": 2023}
-    headers = {"x-apisports-key": API_KEY}
-    resp = requests.get(url, params=params, headers=headers)
-    data = resp.json()
-
-    standings = data["response"][0]["league"]["standings"][0]
-    rows = []
-    for team_info in standings:
-        rows.append({
-            "Position": team_info["rank"],
-            "Team": team_info["team"]["name"],
-            "Points": team_info["points"],
-            "Played": team_info["all"]["played"],
-            "Won": team_info["all"]["win"],
-            "Draw": team_info["all"]["draw"],
-            "Lost": team_info["all"]["lose"],
-            "Goals For": team_info["all"]["goals"]["for"],
-            "Goals Against": team_info["all"]["goals"]["against"],
-            "Goal Diff": team_info["goalsDiff"],
-            "Logo": team_info["team"]["logo"]
-        })
-
-    df = pd.DataFrame(rows)
-    st.title("EPL Table - 2023/2024 Season")
-    st.dataframe(df)
-
-    # 如果 Streamlit >= 1.22
-    st.dataframe(
-        df,
-        column_config={
-            "Logo": st.column_config.ImageColumn("Logo", use_container_width=True)
-        },
-        use_container_width=True
-    )
-
-  
 # ---------------------------
 # 固定页脚（可添加版权声明等）
 # ---------------------------
