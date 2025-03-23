@@ -212,12 +212,11 @@ df_overview_latest = df_agg[df_agg["Date"] == max_date][["Match", "Lowest_Price"
 #############################################
 # 6) Streamlit 界面布局 - Tabs
 #############################################
-tab1, tab2, tab3, tab4, tab5 = st.tabs([
+tab1, tab2, tab3, tab4 = st.tabs([
     "Overview", 
     "Price Trends", 
     "Raw Data", 
-    "Arsenal News",
-    "EPL Table"  # ← 新增
+    "Arsenal News"
 ])
 # ============ Tab 1: Overview ============
 with tab1:
